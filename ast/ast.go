@@ -30,7 +30,7 @@ type TypedElement interface {
 // LiteralInt is a integer literalT
 type LiteralInt interface {
 	Element
-	Value() int32
+	Value() int
 }
 
 // LiteralFloat is a float literal
@@ -130,8 +130,9 @@ type Error interface {
 type Builder interface {
 	PushContext()
 	PopContext()
+	UpdateContext()
 	Name(value string) Name
-	LiteralInt(value int32) LiteralInt
+	LiteralInt(value int) LiteralInt
 	LiteralFloat(value float64) LiteralFloat
 	LiteralBoolean(value bool) LiteralBoolean
 	LiteralString(value string) LiteralString
@@ -161,8 +162,8 @@ type builderImpl struct {
 	locations []position
 }
 
-// MakeBuilder makes an AST builder that can be used to make AST nodes
-func MakeBuilder(context BuilderContext) Builder {
+// NewBuilder makes an AST builder that can be used to make AST nodes
+func NewBuilder(context BuilderContext) Builder {
 	return &builderImpl{context: context}
 }
 
@@ -177,6 +178,10 @@ func (b *builderImpl) PopContext() {
 		prev := b.locations[l-2]
 		b.locations = append(b.locations[:l-2], position{start: prev.start, end: last.end})
 	}
+}
+
+func (b *builderImpl) UpdateContext() {
+	b.locations[len(b.locations)-1] = position{start: b.context.Start(), end: b.context.End()}
 }
 
 func (b *builderImpl) Loc() Location {
@@ -199,14 +204,14 @@ func (b *builderImpl) Name(text string) Name {
 
 type literalIntImpl struct {
 	Location
-	value int32
+	value int
 }
 
-func (l *literalIntImpl) Value() int32 {
+func (l *literalIntImpl) Value() int {
 	return l.value
 }
 
-func (b *builderImpl) LiteralInt(value int32) LiteralInt {
+func (b *builderImpl) LiteralInt(value int) LiteralInt {
 	return &literalIntImpl{Location: b.Loc(), value: value}
 }
 

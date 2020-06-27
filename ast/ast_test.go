@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("ast", func() {
 	Describe("construct", func() {
-		b := ast.MakeBuilder(ast.NewLocation(0, 1))
+		b := ast.NewBuilder(ast.NewLocation(0, 1))
 		b.PushContext()
 		It("Name", func() {
 			n := b.Name("text")
@@ -20,7 +20,7 @@ var _ = Describe("ast", func() {
 		})
 		It("LiteralInt", func() {
 			n := b.LiteralInt(1)
-			Expect(n.Value()).To(Equal(int32(1)))
+			Expect(n.Value()).To(Equal(1))
 		})
 		It("LitearlFloat", func() {
 			l := b.LiteralFloat(1.2)
@@ -88,7 +88,7 @@ var _ = Describe("ast", func() {
 	Describe("location", func() {
 		It("can push a context", func() {
 			l := &BuilderContext{0, 0}
-			b := ast.MakeBuilder(l)
+			b := ast.NewBuilder(l)
 			b.PushContext()
 			l.start = 10
 			l.end = 15
@@ -101,6 +101,12 @@ var _ = Describe("ast", func() {
 			n  = b.Name("name")
 			Expect(n.Start()).To(Equal(token.Pos(0)))
 			Expect(n.End()).To(Equal(token.Pos(15)))
+			l.start = 20
+			l.end = 30
+			b.UpdateContext()
+			n = b.Name("name")
+			Expect(n.Start()).To(Equal(token.Pos(20)))
+			Expect(n.End()).To(Equal(token.Pos(30)))
 		})
 	})
 })
