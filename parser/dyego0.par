@@ -1,0 +1,74 @@
+compilation-unit:               expression
+
+expression:                     simple-expression ([NAME | OPNAME] [simple-expression])* 
+simple-expression:              primitive (selector | call | lambda)*
+primitive:                      literal | 
+                                initializer |
+                                lambda |
+                                definition |
+                                LPAREN expression RPAREN
+selector:                       DOT NAME
+call:                           LPAREN [arguments] RPAREN
+arguments:                      argument (COMMA argument)* [COMMA]
+argument:                       NAME = expression |
+                                expression |
+                                SPLAT expression
+literal:                        LIT_STRING | LIT_FLOAT | LIT_INT | TRUE | FALSE | NULL
+intializer:                     read-only-array-initializer |
+                                mutable-array-initializer |
+                                read-only-object-initializer |
+                                mutable-object-initializer
+read-only-array-initializer:    LBRACK [ array-elements ] RBRACK
+mutable-array-initializer:      LBRACK BANG [ array-elements] BANG RBRACK
+array-elements:                 array-element (COMMA array-element)* [COMMA]
+array-element:                  expression |
+                                SPLAT expression
+read-only-object-initializer:   LBRACK [ member-initializers ] RBRACK
+mutable-object-initializer:     LBRACK BANG [ member-initalizers ] BANG RBRACK
+member-initializers:            member-initializer (COMMA member-initializer) [COMMA]
+member-initializer:             NAME COLON expression |
+                                COLON expression |
+                                SPLAT expression
+lambda:                         RBRACE [formal-lambda-parameters ARROW] expression LBRACE
+formal-lambda-parameters:       formal-lambda-parameter (COMMA formal-lambda-parameter)*
+formal-lambda-parameter:        NAME [ COLON type-reference ]
+
+declaration:                    function-definition |
+                                var-definition |
+                                val-definition 
+
+function-declaration:           [FUN | [INFIX|PREFIX|POSTFIX] OPERATOR] funtion-context* [NAME|OPNAME]
+                                  parameter-list [COLON type-reference]
+function-context:               (NAME | LPAREN type-referencde RPAREN) DOT
+function-definition:            function-declaration (EQ expression | block)
+block:                          LBRACE expression RBRACE
+
+val-definition:                 VAL local-declarations |
+                                VAL destructor-declaration
+var-definition:                 VAR local-declaration |
+                                VAR destructor-declaration
+local-definitions:              local-definition (COMMA local-definition)* [COMMA]
+local-definition:               NAME [COLON type-reference] EQ expression
+destructor-definition:          LBRACK destructure-fields RBRACK
+destructor-fields:              destructure-field (COMMA destructure-field)* [COMMA]
+destructor-field:               [VAR|VAL] NAME [as NAME] [COLON type-reference]
+
+type-declaration:               TYPE NAME EQ type-reference
+type-reference:                 simple-type-expression ([OPNAME|NAME] [simple-type-expression])
+simple-type-expression:         type-expression-primitive (selector|type-call)*
+type-call:                      LPAREN [type-arguments] RPAREN
+type-arguments:                 type-argument (COMMA type-argument)* [COMMA]
+type-argument:                  NAME EQ type-reference |
+                                type-reference
+type-expression-primitive:      NAME |
+                                type-literal
+type-literal:                   LBRACK [member-declarations] RBRACK
+member-declarations:            member-declaration (COMMA member-declaration)*
+member-declaration:             val-members |
+                                var-members |
+                                fun-member |
+                                SPLAT type-reference
+val-members:                    VAL NAME (COMMA NAME)* COLON type-reference
+var-members:                    VAL NAME (COMMA NAME)* COLON type-reference
+
+
