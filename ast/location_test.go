@@ -3,7 +3,7 @@ package ast_test
 import "go/token"
 import . "github.com/onsi/ginkgo"
 import . "github.com/onsi/gomega"
-import "dyego/ast"
+import "dyego0/ast"
 
 var _ = Describe("location", func() {
 	s := token.Pos(1)
