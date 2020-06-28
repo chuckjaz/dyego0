@@ -1,3 +1,4 @@
 *.swp
+*.swo
 coverage.txt
 cover.out
