@@ -4,8 +4,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"dyego/parser"
-	"dyego/tokens"
+	"dyego0/parser"
+	"dyego0/tokens"
 )
 
 func scanBytes(src []byte, expected ...tokens.Token) int {

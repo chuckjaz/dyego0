@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"dyego/assert"
+	"dyego0/assert"
 )
 
 var _ = Describe("Assert", func() {
