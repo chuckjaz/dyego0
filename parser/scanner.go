@@ -1,9 +1,10 @@
 package parser
 
-import "strconv"
-
-import "go/token"
-import "dyego0/tokens"
+import (
+	"strconv"
+	"go/token"
+	"dyego0/tokens"
+)
 
 const (
 	// InternalScan enables internal identifiers
