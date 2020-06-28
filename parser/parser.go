@@ -86,11 +86,11 @@ func (p *parser) expectIdent() ast.Name {
 
 func (p* parser) expression() ast.Element {
 	switch p.current {
-	case tokens.LiteralInt, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
+	case tokens.LiteralInt, tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
 		tokens.Identifier, tokens.LParen:
 		return p.primitive()
 	default:
-		return p.expects(tokens.LiteralInt, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
+		return p.expects(tokens.LiteralInt, tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
 			tokens.Identifier, tokens.LParen)
 	}
 }
@@ -101,8 +101,12 @@ func (p *parser) primitive() ast.Element {
 		result := p.builder.LiteralInt(p.scanner.Value().(int))
 		p.next()
 		return result
+	case tokens.LiteralDouble:
+		result := p.builder.LiteralDouble(p.scanner.Value().(float64))
+		p.next()
+		return result
 	case tokens.LiteralFloat:
-		result := p.builder.LiteralFloat(p.scanner.Value().(float64))
+		result := p.builder.LiteralFloat(p.scanner.Value().(float32))
 		p.next()
 		return result
 	case tokens.LiteralString:

@@ -17,6 +17,16 @@ var _ = Describe("parser", func() {
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(123))
 		})
+		It("can parse a float", func() {
+			l, ok := parse("1.0f").(ast.LiteralFloat)
+			Expect(ok).To(Equal(true))
+			Expect(l.Value()).To(BeNumerically("~", float32(1.0)))
+		})
+		It("can parse a double", func() {
+			l, ok := parse("1.0").(ast.LiteralDouble)
+			Expect(ok).To(Equal(true))
+			Expect(l.Value()).To(Equal(1.0))
+		})
 	})
 })
 

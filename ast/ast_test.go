@@ -22,9 +22,13 @@ var _ = Describe("ast", func() {
 			n := b.LiteralInt(1)
 			Expect(n.Value()).To(Equal(1))
 		})
+		It("LiteralDouble", func() {
+			l := b.LiteralDouble(1.2)
+			Expect(l.Value()).To(BeNumerically("~", 1.2))
+		})
 		It("LitearlFloat", func() {
 			l := b.LiteralFloat(1.2)
-			Expect(l.Value()).To(Equal(float64(1.2)))
+			Expect(l.Value()).To(BeNumerically("~", float32(1.2)))
 		})
 		It("LiteralBoolean", func() {
 			l := b.LiteralBoolean(true)

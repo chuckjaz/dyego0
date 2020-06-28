@@ -33,10 +33,16 @@ type LiteralInt interface {
 	Value() int
 }
 
+// LiteralDouble is a dobule literal
+type LiteralDouble interface {
+	Element
+	Value() float64
+}
+
 // LiteralFloat is a float literal
 type LiteralFloat interface {
 	Element
-	Value() float64
+	Value() float32
 }
 
 // LiteralString is a string literal
@@ -133,7 +139,8 @@ type Builder interface {
 	UpdateContext()
 	Name(value string) Name
 	LiteralInt(value int) LiteralInt
-	LiteralFloat(value float64) LiteralFloat
+	LiteralDouble(value float64) LiteralDouble
+	LiteralFloat(value float32) LiteralFloat
 	LiteralBoolean(value bool) LiteralBoolean
 	LiteralString(value string) LiteralString
 	LiteralNull() LiteralNull
@@ -215,16 +222,29 @@ func (b *builderImpl) LiteralInt(value int) LiteralInt {
 	return &literalIntImpl{Location: b.Loc(), value: value}
 }
 
-type literalFloatImpl struct {
+type literalDoubleImpl struct {
 	Location
 	value float64
 }
 
-func (l *literalFloatImpl) Value() float64 {
+func (l *literalDoubleImpl) Value() float64 {
 	return l.value
 }
 
-func (b *builderImpl) LiteralFloat(value float64) LiteralFloat {
+func (b *builderImpl) LiteralDouble(value float64) LiteralDouble {
+	return &literalDoubleImpl{Location: b.Loc(), value: value}
+}
+
+type literalFloatImpl struct {
+	Location
+	value float32
+}
+
+func (l *literalFloatImpl) Value() float32 {
+	return l.value
+}
+
+func (b *builderImpl) LiteralFloat(value float32) LiteralFloat {
 	return &literalFloatImpl{Location: b.Loc(), value: value}
 }
 
