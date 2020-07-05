@@ -13,7 +13,8 @@ arguments:                      argument (COMMA argument)* [COMMA]
 argument:                       NAME = expression |
                                 expression |
                                 SPLAT expression
-literal:                        LIT_STRING | LIT_FLOAT | LIT_INT | TRUE | FALSE | NULL
+literal:                        LIT_STRING | LIT_RUNE | LIT_INT | LIT_BYTE | LIT_UINT | LIT_LONG | LIT_ULONG |
+                                LIT_FLOAT | LIT_DOUBLE | TRUE | FALSE | NULL
 intializer:                     read-only-array-initializer |
                                 mutable-array-initializer |
                                 read-only-object-initializer |
