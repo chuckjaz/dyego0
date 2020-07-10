@@ -93,6 +93,13 @@ type LiteralNull interface {
     IsNull() bool
 }
 
+// Selection is a member selector
+type Selection interface {
+    Element
+    Target() Element
+    Member() Name
+}
+
 // ObjectInitializer is an object intializer
 type ObjectInitializer interface {
     Element
@@ -166,7 +173,6 @@ type Error interface {
 type Builder interface {
     PushContext()
     PopContext()
-    UpdateContext()
     Name(value string) Name
     LiteralRune(value rune) LiteralRune
     LiteralByte(value byte) LiteralByte
@@ -179,6 +185,7 @@ type Builder interface {
     LiteralBoolean(value bool) LiteralBoolean
     LiteralString(value string) LiteralString
     LiteralNull() LiteralNull
+    Selection(target Element, member Name) Selection
     ObjectInitializer(mutable bool, members []MemberInitializer) ObjectInitializer
     ArrayInitializer(mutable bool, elements []Element) ArrayInitializer
     NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer
@@ -201,7 +208,7 @@ type position struct {
 
 type builderImpl struct {
     context BuilderContext
-    locations []position
+    locations []token.Pos
 }
 
 // NewBuilder makes an AST builder that can be used to make AST nodes
@@ -210,25 +217,16 @@ func NewBuilder(context BuilderContext) Builder {
 }
 
 func (b *builderImpl) PushContext() {
-    b.locations = append(b.locations, position{start: b.context.Start(), end: b.context.End()})
+    b.locations = append(b.locations, b.context.Start())
 }
 
 func (b *builderImpl) PopContext() {
-    l := len(b.locations)
-    if l > 1 {
-        last := b.locations[l-1]
-        prev := b.locations[l-2]
-        b.locations = append(b.locations[:l-2], position{start: prev.start, end: last.end})
-    }
-}
-
-func (b *builderImpl) UpdateContext() {
-    b.locations[len(b.locations)-1] = position{start: b.context.Start(), end: b.context.End()}
+    b.locations = b.locations[0:len(b.locations)-1]
 }
 
 func (b *builderImpl) Loc() Location {
-    pos := b.locations[len(b.locations)-1]
-    return NewLocation(pos.start, pos.end)
+    start := b.locations[len(b.locations)-1]
+    return NewLocation(start, b.context.End())
 }
 
 type nameImpl struct {
@@ -384,6 +382,24 @@ func (l *literalNullImpl) IsNull() bool {
 
 func (b *builderImpl) LiteralNull() LiteralNull {
     return &literalNullImpl{Location: b.Loc()}
+}
+
+type selectionImpl struct {
+    Location
+    target Element
+    member Name
+}
+
+func (l *selectionImpl) Target() Element {
+    return l.target
+}
+
+func (l *selectionImpl) Member() Name {
+    return l.member
+}
+
+func (b *builderImpl) Selection(target Element, member Name) Selection {
+    return &selectionImpl{Location: b.Loc(), target: target, member: member}
 }
 
 type objectInitializerImpl struct {

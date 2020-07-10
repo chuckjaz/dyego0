@@ -62,6 +62,11 @@ var _ = Describe("ast", func() {
             l := b.LiteralNull()
             Expect(l.IsNull()).To(Equal(true))
         })
+        It("Selection", func() {
+            l := b.Selection(nil, nil)
+            Expect(l.Target()).To(BeNil())
+            Expect(l.Member()).To(BeNil())
+        })
         It("ObjectInitializer", func() {
             l := b.ObjectInitializer(false, nil)
             Expect(l.Mutable()).To(Equal(false))
@@ -127,10 +132,12 @@ var _ = Describe("ast", func() {
             Expect(n.End()).To(Equal(token.Pos(15)))
             l.start = 20
             l.end = 30
-            b.UpdateContext()
+            b.PushContext()
             n = b.Name("name")
             Expect(n.Start()).To(Equal(token.Pos(20)))
             Expect(n.End()).To(Equal(token.Pos(30)))
+            b.PopContext()
+            b.PopContext()
         })
     })
 })
