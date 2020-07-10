@@ -68,12 +68,13 @@ func (p *parser) expects(ts ...tokens.Token) ast.Element {
 }
 
 func (p *parser) next() tokens.Token {
-    p.builder.UpdateContext()
     p.current = p.scanner.Next()
     return p.current
 }
 
 func (p *parser) expectIdent() ast.Name {
+    p.builder.PushContext()
+    defer p.builder.PopContext()
     if p.current == tokens.Identifier {
         result := p.builder.Name(p.scanner.Value().(string))
         p.next()
@@ -89,14 +90,54 @@ var primitiveTokens = []tokens.Token{
         tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LParen,
 }
 
-func (p* parser) expression() ast.Element {
+func (p *parser) expression() ast.Element {
     switch p.current {
     case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
         tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LParen:
-        return p.primitive()
+        return p.simpleExpression()
     default:
         return p.expects(primitiveTokens...)
     }
+}
+
+func (p *parser) simpleExpression() ast.Element {
+    p.builder.PushContext()
+    defer p.builder.PopContext()
+    switch p.current {
+    case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
+        tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LParen:
+        left := p.primitive()
+        for {
+            switch p.current {
+            case tokens.Dot:
+                left = p.selector(left)
+                continue
+            }
+            break
+        }
+        return left
+    default:
+        return p.expects(primitiveTokens...)
+    }
+}
+
+func (p *parser) selector(left ast.Element) ast.Element {
+    switch p.current {
+    case tokens.Dot:
+        p.next()
+        for {
+            name := p.expectIdent()
+            left = p.builder.Selection(left, name)
+            if p.current == tokens.Dot {
+                p.next()
+                continue
+            }
+            break
+        }
+    default:
+        p.expect(tokens.Dot)
+    }
+    return left
 }
 
 func (p *parser) primitive() ast.Element {

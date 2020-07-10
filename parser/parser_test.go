@@ -6,6 +6,8 @@ import (
     . "github.com/onsi/ginkgo"
     . "github.com/onsi/gomega"
 
+    "go/token"
+
     "dyego0/ast"
     "dyego0/parser"
 )
@@ -51,6 +53,18 @@ var _ = Describe("parser", func() {
             l, ok := parse("1.0").(ast.LiteralDouble)
             Expect(ok).To(Equal(true))
             Expect(l.Value()).To(Equal(1.0))
+        })
+    })
+    Describe("simple expression", func() {
+        It("can parse a selection", func() {
+            l, ok := parse("a.b").(ast.Selection)
+            Expect(ok).To(Equal(true))
+            t, ok := l.Target().(ast.Name)
+            Expect(ok).To(Equal(true))
+            Expect(t.Text()).To(Equal("a"))
+            Expect(l.Member().Text()).To(Equal("b"))
+            Expect(l.Start()).To(Equal(token.Pos(0)))
+            Expect(l.End()).To(Equal(token.Pos(3)))
         })
     })
 })
