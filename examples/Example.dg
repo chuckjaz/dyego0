@@ -1,0 +1,235 @@
+[! 10, 20 !]
+10.232f
+
+"asdfasdfasdfa"
+
+'a'
+
+let vector = { }
+
+[name: "a", address: "b"]
+
+let address = {name: string, address: string -> [:name, :address] }
+
+---
+
+// Vocabulary is <| ... |>
+
+// C++ operators example
+let `C++` = <|
+    infix operator `::` left
+    postfix operator (`++`, `--`, `()`, `[]`, `+`, `->`) left  
+    prefix operator (`++`, `--`, `+`, `-`, `!`, `*`, `&`, sizeof, co_await, new, delete) right
+    infix operator (`.*`, `->*`) left
+    infix operator (`*`, `/`, `%`) left
+    infix operator (`+`, `-`) left
+    infix operator (`<<`, `>>`) left
+    infix operator `<=>` left
+    infix operator (`<`, `>`, `<=`, `>=`) left
+    infix operator (`==`, `!=`) left
+    infix operator `&` left
+    infix operator `^` left
+    infix operator `|` left
+    infix operator `&&` left
+    infix operator `||` left
+    infix operator (`? :`, throw, co_yeild, `=`, `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`) right
+    infix operator `,` left
+|>
+
+// Kotlin operators example
+let Kotlin = <|
+    postfix operator (`++`, `--`, `.`, `.`, `?.`, `?`) left
+    prefix operator (`-`, `+`, `++`, `--`, `!`, <label>) right
+    postfix (`:`, as `as?`) left
+    infix operator (`*`, `/`, `%`) left
+    infix operator (`+`, `-`) left
+    infix operator `..` left
+    infix operator `?:` left
+    infix operator (in, `!in`, is, `!is`) left
+    infix operator (`<`', `>`, `<=`, `>=`) left
+    infix operator (`==`, `!==`) left
+    infix operator `&&` left
+    infix operator `||` left
+    prefix operator `*` right
+    infix operator (`=`, `+=`, `-=`, `*=`, `/=`, `%=`) left
+|>
+
+// Kotlin evolved to add some C++
+let `Kotlin & C++` = <|
+    ...Kotlin
+    infix operator `::` before postfix `++` left
+    postfix operator `->` same as postfix `.`) left
+    postfix operator (`.*`, `->*)  after prefix `++` left
+|>
+
+
+// Lambdas are { ... }, parameterized lambdas are { x, y -> }, general lambdas are { X, Y | ... }
+let vector = { x, y, z: Double -> [:x, :y, :z] } as Vector
+let identity_explicit = { X | x: X -> x }: X
+let identity_implicit = { x -> x }
+
+---
+// Type declaration is :< ... >: open types are :< x, y -> ... >:
+
+... <| infix operator dot left after infix `+` |>
+
+let Vector = <
+    x, y, z: Double
+    `*`: { scale: Double } as Vector
+    `+`: { other: Vector } as Vector
+    `-`: { other: Vector } as Vector
+    dot: { other: Vector } as Vector
+    magnitude: { } as Double
+    nomalize: { } as Vector
+>
+
+let vector = {x, y, z: Double -> [Vector> :x, :y, :z] }
+let Vector.`*` = { scale: Double -> [<Vector> :x * scale, :y * scale, :z * scale ] }
+let Vector.`+` = { other: Vector -> [<Vector> :x + other.x, :y + other.y, :z + other.z] }
+let Vector.`-` = { other: Vector -> [<Vector> :x - ohter.x, :y - other.y, :z - other.z] }
+let Vector.dot = { other: Vector -> x * other.x + y * other.y + z * other.z }
+let Vector.magnitude = { this do this).sqrt() }
+let Vector.normalize = { this * (1.0/magnitude()) }
+
+let Ray = <
+    origin, direction: Vector
+>
+let ray = { origin, direction: Vector -> [<Ray> :origin, :direction] }
+
+let Color = <
+    r, g, b: Double
+    `*`: { scale: Double } as Color
+    `+`: { other: Color } as Color
+>
+
+let color = { r, g, b: Double -> [<Color> :r, :g, :b] }
+let Color.`*` = { scale: Double -> [<Color> :r * scale, :g * scale, :b * scale }
+let Color.`+` = { other: Color -> [<Color> :r + other.r, :g + other.g, :b + other.b] }
+
+let white = color(r: 1.0, g: 1.0, b:1.0)
+let red = color(r: 1.0, g: 0.0, b: 0.0)
+let green = color(r: 0.0, g: 1.0, b: 0.0)
+let blue = color(r: 0.0, g; 0.0, b: 1.0)
+
+let Sphere = <
+    center: Vector
+    radius: Double
+    color: Color
+    normalize: { vector: Vector } as Vector
+>
+
+let sphere = { center: Vector, radius: Double, color: Color -> [<Sphere> :center, :radius, :color] }
+let Sphere.normalize = { vector: Vector -> (center - v).normalize() }
+
+let Light = <
+    position: Vector
+    color: Color
+>
+let light = { position: Vector, color: Color -> [<Light> :position, :color] }
+
+val light1 = light(position: [x: 0.7, y: -1.0, z: 1.7], color: white)
+val lut = [".", "-", "+", "*", "X", "M"]
+val w = 80
+val h = 40
+
+let spheres = { t: Double -> 
+    [<Sphere[]>
+        [   center: [ x: -1.0, y: 1.0 - t/10.0, z: 3.0 ]
+            radius: 0.3
+            color: red ]
+        [   center: [ x: 0.0, y: 1.0 - t/10.0, z: 3.0 - t/4.0 ]
+            radius: 0.8
+            color: green ]
+        [   center: [ x: 1.0, y: 0.0, z: t 8 1.5 ],
+            radius: 0.8,
+            color: blue ]
+    ] 
+}
+
+let loop = { t: Double ->
+    var j = 0
+    let fw = w.toDouble()
+    let fh = h.toDouble()
+    let scene = spheres(:t)
+    while(j < h) {
+        let fj = j.toDouble()
+        var i = 0
+        while(i < w) {
+            let fi = i.toDouble()
+            let ray = [<Ray>
+                origin: [x: 1.5, y: 1.7, z: -5.5]
+                direction: vector(x: (fi - fw)/3.0/fw, y: (fj - fh)/3.0/fh, z: 1.0)
+            ].normalize()
+        }
+
+        var isHit = false
+        var hitSphere: Sphere | Unit = null
+        var tval = 0.0
+        
+        var t = 0
+        while(t < 3) {
+            var obj = scene[t]
+            let ret = intersectSphere(ray, obj.center, obj.radius)
+            if(ret.hit) {
+                hitSphere := obj
+                isHit := true
+                tval := ret.tval                
+            }
+            t := t + 1
+        }
+        if(isHit) {
+            print(lut[shadePixel(:ray, :hitSphere, :tval])
+        } else {
+            print(" ")
+        }
+    }
+}
+
+let shadePixel = { ray: Ray, obj: Sphere, tval: Double ->
+    let pi = ray.origin + ray.direction * tval
+    let color = diffuseShading(:pi, :obj, light: light1)
+    let col = (color.r * color.g * color.b) / 3.0
+    
+    return col + (lut.size.toDouble()).floor()
+}
+
+let HitPoint = <
+    hit: Boolean
+    tval: Double
+>
+let hitPoint = { hit: Boolean, tval: Double -> [<HitPoint> :hit, :tval] }
+
+let intersectSphere = { ray: Ray, center; Vector, radius: Double ->
+    let l = center - ray.origin
+    let tca = l dot ray.direction
+    if(tca < 0.0) {
+        return [hit: false, tval: -1.0]
+    }
+    let d2 = (l dot l) - tca * tca
+    let r2 = radius * radius
+    if(d2 > r2) {
+        return [hit: false, tval: -1.0]
+    }
+    if(t0 > 1000.0) {
+        return [hit: false, tval: -1.0]
+    }
+    return [hit: true, tval: t0]
+}
+
+let clamp = {x, a, b: Double -> 
+    if(x < a) { return a }
+    if(x > b) { return b }
+    return x
+}
+
+var t = 0.0
+
+print("[?25l")
+print("[H[2J")
+while(t < 1.0) {
+  print("[H")
+  loop(t)
+  t := t + 0.2
+}
+print("[?25h")
+
