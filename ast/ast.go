@@ -100,6 +100,21 @@ type Selection interface {
     Member() Name
 }
 
+// Call is a call expression
+type Call interface {
+    Element
+    Target() Element
+    Arguments() []Element
+}
+
+// NamedArgument is a named argument to a call expression
+type NamedArgument interface {
+    Element
+    Name() Name
+    Value() Element
+    IsNamedArgument() bool
+}
+
 // ObjectInitializer is an object intializer
 type ObjectInitializer interface {
     Element
@@ -186,6 +201,8 @@ type Builder interface {
     LiteralString(value string) LiteralString
     LiteralNull() LiteralNull
     Selection(target Element, member Name) Selection
+    Call(target Element, arguments []Element) Call
+    NamedArgument(name Name, value Element) NamedArgument
     ObjectInitializer(mutable bool, members []MemberInitializer) ObjectInitializer
     ArrayInitializer(mutable bool, elements []Element) ArrayInitializer
     NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer
@@ -194,6 +211,7 @@ type Builder interface {
     Parameter(name Name, typ Element, deflt Element) Parameter
     VarDefinition(name Name, typ Element, mutable bool) VarDefinition
     Error(message string) Error
+    Clone(context BuilderContext) Builder
 }
 
 // BuilderContext provides the source location for a Builder
@@ -402,6 +420,46 @@ func (b *builderImpl) Selection(target Element, member Name) Selection {
     return &selectionImpl{Location: b.Loc(), target: target, member: member}
 }
 
+type callImpl struct {
+    Location
+    target Element
+    arguments []Element
+}
+
+func (c *callImpl) Target() Element {
+    return c.target
+}
+
+func (c *callImpl) Arguments() []Element {
+    return c.arguments
+}
+
+func (b *builderImpl) Call(target Element, arguments []Element) Call {
+    return &callImpl{Location: b.Loc(), target: target, arguments: arguments}
+}
+
+type namedArgumentImpl struct {
+    Location
+    name Name
+    value Element
+}
+
+func (n *namedArgumentImpl) Name() Name {
+    return n.name
+}
+
+func (n *namedArgumentImpl) Value() Element {
+    return n.value
+}
+
+func (n *namedArgumentImpl) IsNamedArgument() bool {
+    return true
+}
+
+func (b *builderImpl) NamedArgument(name Name, value Element) NamedArgument {
+    return &namedArgumentImpl{Location: b.Loc(), name: name, value: value}
+}
+
 type objectInitializerImpl struct {
     Location
     mutable bool
@@ -569,5 +627,9 @@ func (e *errorImpl) Message() string {
 
 func (b *builderImpl) Error(message string) Error {
     return &errorImpl{Location: b.Loc(), message: message}
+}
+
+func (b *builderImpl) Clone(context BuilderContext) Builder {
+    return &builderImpl{context: context, locations: b.locations}
 }
 
