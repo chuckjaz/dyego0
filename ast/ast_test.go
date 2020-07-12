@@ -67,6 +67,17 @@ var _ = Describe("ast", func() {
             Expect(l.Target()).To(BeNil())
             Expect(l.Member()).To(BeNil())
         })
+        It("Call", func() {
+            l := b.Call(nil, nil)
+            Expect(l.Target()).To(BeNil())
+            Expect(l.Arguments()).To(BeNil())
+        })
+        It("NamedArgument", func() {
+            l := b.NamedArgument(nil, nil)
+            Expect(l.Name()).To(BeNil())
+            Expect(l.Value()).To(BeNil())
+            Expect(l.IsNamedArgument()).To(Equal(true))
+        })
         It("ObjectInitializer", func() {
             l := b.ObjectInitializer(false, nil)
             Expect(l.Mutable()).To(Equal(false))
@@ -138,6 +149,22 @@ var _ = Describe("ast", func() {
             Expect(n.End()).To(Equal(token.Pos(30)))
             b.PopContext()
             b.PopContext()
+        })
+    })
+    Describe("clone", func() {
+        It("can clone a builder", func() {
+            bc := &BuilderContext{0, 0}
+            b := ast.NewBuilder(bc)
+            b.PushContext()
+            cc := &BuilderContext{0, 0}
+            c := b.Clone(cc)
+            bc.start = 100
+            bc.end = 101
+            b.PushContext()
+            bn := b.Name("b")
+            cn := c.Name("c")
+            Expect(bn.Start()).To(Equal(token.Pos(100)))
+            Expect(cn.Start()).To(Equal(token.Pos(0)))
         })
     })
 })

@@ -85,6 +85,18 @@ func (p *parser) expectIdent() ast.Name {
     return result
 }
 
+func (p *parser) preserve() *parser {
+    scanner := p.scanner.Clone()
+    return &parser{scanner: scanner, builder: p.builder.Clone(scanner), current: p.current, errors: p.errors}
+}
+
+func (p *parser) restore(parser *parser) {
+    p.scanner = parser.scanner
+    p.builder = parser.builder
+    p.current = parser.current
+    p.errors = parser.errors
+}
+
 var primitiveTokens = []tokens.Token{
     tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
         tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LParen,
@@ -112,6 +124,8 @@ func (p *parser) simpleExpression() ast.Element {
             case tokens.Dot:
                 left = p.selector(left)
                 continue
+            case tokens.LParen:
+                left = p.call(left)
             }
             break
         }
@@ -122,22 +136,63 @@ func (p *parser) simpleExpression() ast.Element {
 }
 
 func (p *parser) selector(left ast.Element) ast.Element {
+    p.expect(tokens.Dot)
+    name := p.expectIdent()
+    return p.builder.Selection(left, name)
+}
+
+func (p *parser) call(left ast.Element) ast.Element {
+    p.expect(tokens.LParen)
+    arguments := p.arguments()
+    p.expect(tokens.RParen)
+    return p.builder.Call(left, arguments)
+}
+
+func (p *parser) arguments() []ast.Element {
+    var arguments []ast.Element
     switch p.current {
-    case tokens.Dot:
-        p.next()
+    case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
+        tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LParen:
         for {
-            name := p.expectIdent()
-            left = p.builder.Selection(left, name)
-            if p.current == tokens.Dot {
-                p.next()
-                continue
+            switch p.current {
+            case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
+                tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LParen:
+                argument := p.argument()
+                arguments = append(arguments, argument)
+                if p.current == tokens.Comma {
+                    p.next()
+                    switch p.current {
+                    case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
+                        tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, 
+                        tokens.LParen:
+                        continue
+                    }
+                }
             }
             break
         }
-    default:
-        p.expect(tokens.Dot)
     }
-    return left
+    return arguments
+}
+
+func (p *parser) argument() ast.Element {
+    preserved := p.preserve()
+    namedArgument := p.namedArgument()
+    if len(p.errors) > len(preserved.errors) {
+        // not a named arguemnt
+        p.restore(preserved)
+        return p.expression()
+    }
+    return namedArgument
+}
+
+func (p *parser) namedArgument() ast.Element {
+    p.builder.PushContext()
+    defer p.builder.PopContext()
+    name := p.expectIdent()
+    p.expect(tokens.Equal)
+    value := p.expression()
+    return p.builder.NamedArgument(name, value)
 }
 
 func (p *parser) primitive() ast.Element {
@@ -191,6 +246,7 @@ func (p *parser) primitive() ast.Element {
         p.next()
         return result
     case tokens.LParen:
+        p.expect(tokens.LParen)
         expr := p.expression()
         p.expect(tokens.RParen)
         return expr
