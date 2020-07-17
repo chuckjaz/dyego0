@@ -1,729 +1,727 @@
 package ast
 
 import (
-    "go/token"
+	"go/token"
 )
 
 // Element is the root of all AST nodes.
 type Element interface {
-    Locatable
+	Locatable
 }
 
 // Name is an identifier name
 type Name interface {
-    Element
-    Text() string
+	Element
+	Text() string
 }
 
 // NamedElement is an abstraction for all named nodes
 type NamedElement interface {
-    Element
-    Name() Name
+	Element
+	Name() Name
 }
 
 // TypedElement is an abstraction for all typed elements
 type TypedElement interface {
-    Element
-    Type() Element
+	Element
+	Type() Element
 }
 
 // LiteralRune is a rune literal
 type LiteralRune interface {
-    Element
-    Value() rune
+	Element
+	Value() rune
 }
 
 // LiteralByte is a byte literal
 type LiteralByte interface {
-    Element
-    Value() byte
+	Element
+	Value() byte
 }
 
 // LiteralInt is a integer literal
 type LiteralInt interface {
-    Element
-    Value() int
+	Element
+	Value() int
 }
 
 // LiteralUInt is an unsigned integer literal
 type LiteralUInt interface {
-    Element
-    Value() uint
+	Element
+	Value() uint
 }
 
 // LiteralLong is a long literal
 type LiteralLong interface {
-    Element
-    Value() int64
+	Element
+	Value() int64
 }
 
 // LiteralULong is an unsigned long literal
 type LiteralULong interface {
-    Element
-    Value() uint64
+	Element
+	Value() uint64
 }
 
 // LiteralDouble is a dobule literal
 type LiteralDouble interface {
-    Element
-    Value() float64
+	Element
+	Value() float64
 }
 
 // LiteralFloat is a float literal
 type LiteralFloat interface {
-    Element
-    Value() float32
+	Element
+	Value() float32
 }
 
 // LiteralString is a string literal
 type LiteralString interface {
-    Element
-    Value() string
+	Element
+	Value() string
 }
 
 // LiteralBoolean is a boolean literal
 type LiteralBoolean interface {
-    Element
-    Value() bool
+	Element
+	Value() bool
 }
 
 // LiteralNull is a null litearl
 type LiteralNull interface {
-    Element
-    IsNull() bool
+	Element
+	IsNull() bool
 }
 
 // Selection is a member selector
 type Selection interface {
-    Element
-    Target() Element
-    Member() Name
+	Element
+	Target() Element
+	Member() Name
 }
 
 // Call is a call expression
 type Call interface {
-    Element
-    Target() Element
-    Arguments() []Element
+	Element
+	Target() Element
+	Arguments() []Element
 }
 
 // NamedArgument is a named argument to a call expression
 type NamedArgument interface {
-    Element
-    Name() Name
-    Value() Element
-    IsNamedArgument() bool
+	Element
+	Name() Name
+	Value() Element
+	IsNamedArgument() bool
 }
 
 // ObjectInitializer is an object intializer
 type ObjectInitializer interface {
-    Element
-    Mutable() bool
-    Members() []MemberInitializer
-    IsObject() bool
+	Element
+	Mutable() bool
+	Members() []MemberInitializer
+	IsObject() bool
 }
 
 // ArrayInitializer is an array initializer
-type  ArrayInitializer interface {
-    Element
-    Mutable() bool
-    Elements() []Element
-    IsArray() bool
+type ArrayInitializer interface {
+	Element
+	Mutable() bool
+	Elements() []Element
+	IsArray() bool
 }
 
 // MemberInitializer an abstraction for all object member initializers
 type MemberInitializer interface {
-    Element
+	Element
 }
 
 // NamedMemberInitializer is a  named field initializer for an object
 type NamedMemberInitializer interface {
-    Element
-    Name() Name
-    Type() Element
-    Value() Element
+	Element
+	Name() Name
+	Type() Element
+	Value() Element
 }
 
 // SplatMemberInitializer is a type hoisting member intiailizer
 type SplatMemberInitializer interface {
-    MemberInitializer
-    Type() Element
-    IsSplat() bool
+	MemberInitializer
+	Type() Element
+	IsSplat() bool
 }
 
 // Lambda is a lambda
 type Lambda interface {
-    Element
-    TypeParameters() TypeParameters
-    Parameters() []Parameter
-    Body() Element
+	Element
+	TypeParameters() TypeParameters
+	Parameters() []Parameter
+	Body() Element
 }
 
 // Parameter is a function or lambda parameter declaration
 type Parameter interface {
-    Element
-    Name() Name
-    Type() Element
-    Default() Element
-    IsParameter() bool
+	Element
+	Name() Name
+	Type() Element
+	Default() Element
+	IsParameter() bool
 }
 
 // TypeParameters is a type paramters clause
 type TypeParameters interface {
-    Element
-    Parameters() []TypeParameter
-    Wheres() []Where
+	Element
+	Parameters() []TypeParameter
+	Wheres() []Where
 }
 
 // TypeParameter is a type parameter
 type TypeParameter interface {
-    Element
-    Name() Name
-    Constraint() Element
-    IsTypeParameter() bool
+	Element
+	Name() Name
+	Constraint() Element
+	IsTypeParameter() bool
 }
 
 // Where is a type parameter where clause
 type Where interface {
-    Element
-    Left() Element
-    Right() Element
-    IsWhere() bool
+	Element
+	Left() Element
+	Right() Element
+	IsWhere() bool
 }
 
 // VarDefinition is a field or local variable defintion or declaration
 type VarDefinition interface {
-    Element
-    Name() Name
-    Type() Element
-    Mutable() bool
-    IsField() bool
+	Element
+	Name() Name
+	Type() Element
+	Mutable() bool
+	IsField() bool
 }
 
 // Error is a error node that should be reported
 type Error interface {
-    Element
-    Message() string
-
+	Element
+	Message() string
 }
 
 // Builder is a helper to build AST nodes that uses context typecially provided by a scanner to
 // initiazlier the location of AST nodes.
 type Builder interface {
-    PushContext()
-    PopContext()
-    Name(value string) Name
-    LiteralRune(value rune) LiteralRune
-    LiteralByte(value byte) LiteralByte
-    LiteralInt(value int) LiteralInt
-    LiteralUInt(value uint) LiteralUInt
-    LiteralLong(value int64) LiteralLong
-    LiteralULong(value uint64) LiteralULong
-    LiteralDouble(value float64) LiteralDouble
-    LiteralFloat(value float32) LiteralFloat
-    LiteralBoolean(value bool) LiteralBoolean
-    LiteralString(value string) LiteralString
-    LiteralNull() LiteralNull
-    Selection(target Element, member Name) Selection
-    Call(target Element, arguments []Element) Call
-    NamedArgument(name Name, value Element) NamedArgument
-    ObjectInitializer(mutable bool, members []MemberInitializer) ObjectInitializer
-    ArrayInitializer(mutable bool, elements []Element) ArrayInitializer
-    NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer
-    SplatMemberInitializer(typ Element) SplatMemberInitializer
-    Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda
-    TypeParameters(parameters []TypeParameter, wheres []Where) TypeParameters
-    TypeParameter(name Name, constraint Element) TypeParameter
-    Where(left, right Element) Where
-    Parameter(name Name, typ Element, deflt Element) Parameter
-    VarDefinition(name Name, typ Element, mutable bool) VarDefinition
-    Error(message string) Error
-    Clone(context BuilderContext) Builder
+	PushContext()
+	PopContext()
+	Name(value string) Name
+	LiteralRune(value rune) LiteralRune
+	LiteralByte(value byte) LiteralByte
+	LiteralInt(value int) LiteralInt
+	LiteralUInt(value uint) LiteralUInt
+	LiteralLong(value int64) LiteralLong
+	LiteralULong(value uint64) LiteralULong
+	LiteralDouble(value float64) LiteralDouble
+	LiteralFloat(value float32) LiteralFloat
+	LiteralBoolean(value bool) LiteralBoolean
+	LiteralString(value string) LiteralString
+	LiteralNull() LiteralNull
+	Selection(target Element, member Name) Selection
+	Call(target Element, arguments []Element) Call
+	NamedArgument(name Name, value Element) NamedArgument
+	ObjectInitializer(mutable bool, members []MemberInitializer) ObjectInitializer
+	ArrayInitializer(mutable bool, elements []Element) ArrayInitializer
+	NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer
+	SplatMemberInitializer(typ Element) SplatMemberInitializer
+	Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda
+	TypeParameters(parameters []TypeParameter, wheres []Where) TypeParameters
+	TypeParameter(name Name, constraint Element) TypeParameter
+	Where(left, right Element) Where
+	Parameter(name Name, typ Element, deflt Element) Parameter
+	VarDefinition(name Name, typ Element, mutable bool) VarDefinition
+	Error(message string) Error
+	Clone(context BuilderContext) Builder
 }
 
 // BuilderContext provides the source location for a Builder
 type BuilderContext interface {
-    Start() token.Pos
-    End() token.Pos
+	Start() token.Pos
+	End() token.Pos
 }
 
 type position struct {
-    start, end token.Pos
+	start, end token.Pos
 }
 
 type builderImpl struct {
-    context BuilderContext
-    locations []token.Pos
+	context   BuilderContext
+	locations []token.Pos
 }
 
 // NewBuilder makes an AST builder that can be used to make AST nodes
 func NewBuilder(context BuilderContext) Builder {
-    return &builderImpl{context: context}
+	return &builderImpl{context: context}
 }
 
 func (b *builderImpl) PushContext() {
-    b.locations = append(b.locations, b.context.Start())
+	b.locations = append(b.locations, b.context.Start())
 }
 
 func (b *builderImpl) PopContext() {
-    b.locations = b.locations[0:len(b.locations)-1]
+	b.locations = b.locations[0 : len(b.locations)-1]
 }
 
 func (b *builderImpl) Loc() Location {
-    start := b.locations[len(b.locations)-1]
-    return NewLocation(start, b.context.End())
+	start := b.locations[len(b.locations)-1]
+	return NewLocation(start, b.context.End())
 }
 
 type nameImpl struct {
-    Location
-    text string
+	Location
+	text string
 }
 
 func (n *nameImpl) Text() string {
-    return n.text
+	return n.text
 }
 
 func (b *builderImpl) Name(text string) Name {
-    return &nameImpl{Location: b.Loc(), text: text}
+	return &nameImpl{Location: b.Loc(), text: text}
 }
 
 type literalRuneImpl struct {
-    Location
-    value rune
+	Location
+	value rune
 }
 
 func (l *literalRuneImpl) Value() rune {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralRune(value rune) LiteralRune {
-    return &literalRuneImpl{Location: b.Loc(), value: value}
+	return &literalRuneImpl{Location: b.Loc(), value: value}
 }
 
 type literalByteImpl struct {
-    Location
-    value byte
+	Location
+	value byte
 }
 
 func (l *literalByteImpl) Value() byte {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralByte(value byte) LiteralByte {
-    return &literalByteImpl{Location: b.Loc(), value: value}
+	return &literalByteImpl{Location: b.Loc(), value: value}
 }
 
 type literalIntImpl struct {
-    Location
-    value int
+	Location
+	value int
 }
 
 func (l *literalIntImpl) Value() int {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralInt(value int) LiteralInt {
-    return &literalIntImpl{Location: b.Loc(), value: value}
+	return &literalIntImpl{Location: b.Loc(), value: value}
 }
 
 type literalUIntImpl struct {
-    Location
-    value uint
+	Location
+	value uint
 }
 
 func (l *literalUIntImpl) Value() uint {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralUInt(value uint) LiteralUInt {
-    return &literalUIntImpl{Location: b.Loc(), value: value}
+	return &literalUIntImpl{Location: b.Loc(), value: value}
 }
 
 type literalLongImpl struct {
-    Location
-    value int64
+	Location
+	value int64
 }
 
 func (l *literalLongImpl) Value() int64 {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralLong(value int64) LiteralLong {
-    return &literalLongImpl{Location: b.Loc(), value: value}
+	return &literalLongImpl{Location: b.Loc(), value: value}
 }
 
 type literalULongImpl struct {
-    Location
-    value uint64
+	Location
+	value uint64
 }
 
 func (l *literalULongImpl) Value() uint64 {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralULong(value uint64) LiteralULong {
-    return &literalULongImpl{Location: b.Loc(), value: value}
+	return &literalULongImpl{Location: b.Loc(), value: value}
 }
 
 type literalDoubleImpl struct {
-    Location
-    value float64
+	Location
+	value float64
 }
 
 func (l *literalDoubleImpl) Value() float64 {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralDouble(value float64) LiteralDouble {
-    return &literalDoubleImpl{Location: b.Loc(), value: value}
+	return &literalDoubleImpl{Location: b.Loc(), value: value}
 }
 
 type literalFloatImpl struct {
-    Location
-    value float32
+	Location
+	value float32
 }
 
 func (l *literalFloatImpl) Value() float32 {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralFloat(value float32) LiteralFloat {
-    return &literalFloatImpl{Location: b.Loc(), value: value}
+	return &literalFloatImpl{Location: b.Loc(), value: value}
 }
 
 type literalBooleanImpl struct {
-    Location
-    value bool
+	Location
+	value bool
 }
 
 func (l *literalBooleanImpl) Value() bool {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralBoolean(value bool) LiteralBoolean {
-    return &literalBooleanImpl{Location: b.Loc(), value: value}
+	return &literalBooleanImpl{Location: b.Loc(), value: value}
 }
 
 type literalStringImpl struct {
-    Location
-    value string
+	Location
+	value string
 }
 
 func (l *literalStringImpl) Value() string {
-    return l.value
+	return l.value
 }
 
 func (b *builderImpl) LiteralString(value string) LiteralString {
-    return &literalStringImpl{Location: b.Loc(), value: value}
+	return &literalStringImpl{Location: b.Loc(), value: value}
 }
 
 type literalNullImpl struct {
-    Location
+	Location
 }
 
 func (l *literalNullImpl) IsNull() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) LiteralNull() LiteralNull {
-    return &literalNullImpl{Location: b.Loc()}
+	return &literalNullImpl{Location: b.Loc()}
 }
 
 type selectionImpl struct {
-    Location
-    target Element
-    member Name
+	Location
+	target Element
+	member Name
 }
 
 func (l *selectionImpl) Target() Element {
-    return l.target
+	return l.target
 }
 
 func (l *selectionImpl) Member() Name {
-    return l.member
+	return l.member
 }
 
 func (b *builderImpl) Selection(target Element, member Name) Selection {
-    return &selectionImpl{Location: b.Loc(), target: target, member: member}
+	return &selectionImpl{Location: b.Loc(), target: target, member: member}
 }
 
 type callImpl struct {
-    Location
-    target Element
-    arguments []Element
+	Location
+	target    Element
+	arguments []Element
 }
 
 func (c *callImpl) Target() Element {
-    return c.target
+	return c.target
 }
 
 func (c *callImpl) Arguments() []Element {
-    return c.arguments
+	return c.arguments
 }
 
 func (b *builderImpl) Call(target Element, arguments []Element) Call {
-    return &callImpl{Location: b.Loc(), target: target, arguments: arguments}
+	return &callImpl{Location: b.Loc(), target: target, arguments: arguments}
 }
 
 type namedArgumentImpl struct {
-    Location
-    name Name
-    value Element
+	Location
+	name  Name
+	value Element
 }
 
 func (n *namedArgumentImpl) Name() Name {
-    return n.name
+	return n.name
 }
 
 func (n *namedArgumentImpl) Value() Element {
-    return n.value
+	return n.value
 }
 
 func (n *namedArgumentImpl) IsNamedArgument() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) NamedArgument(name Name, value Element) NamedArgument {
-    return &namedArgumentImpl{Location: b.Loc(), name: name, value: value}
+	return &namedArgumentImpl{Location: b.Loc(), name: name, value: value}
 }
 
 type objectInitializerImpl struct {
-    Location
-    mutable bool
-    members []MemberInitializer
+	Location
+	mutable bool
+	members []MemberInitializer
 }
 
 func (o *objectInitializerImpl) Mutable() bool {
-    return o.mutable
+	return o.mutable
 }
 
 func (o *objectInitializerImpl) Members() []MemberInitializer {
-    return o.members
+	return o.members
 }
 
 func (o *objectInitializerImpl) IsObject() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) ObjectInitializer(mutable bool, members []MemberInitializer) ObjectInitializer {
-    return &objectInitializerImpl{Location: b.Loc(), mutable: mutable, members: members}
+	return &objectInitializerImpl{Location: b.Loc(), mutable: mutable, members: members}
 }
 
 type arrayInitializerImpl struct {
-    Location
-    mutable bool
-    elements []Element
+	Location
+	mutable  bool
+	elements []Element
 }
 
 func (a *arrayInitializerImpl) Mutable() bool {
-    return a.mutable
+	return a.mutable
 }
 
 func (a *arrayInitializerImpl) Elements() []Element {
-    return a.elements
+	return a.elements
 }
 
 func (a *arrayInitializerImpl) IsArray() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) ArrayInitializer(mutable bool, elements []Element) ArrayInitializer {
-    return &arrayInitializerImpl{Location: b.Loc(), mutable: mutable, elements: elements}
+	return &arrayInitializerImpl{Location: b.Loc(), mutable: mutable, elements: elements}
 }
 
 type namedMemberInitializerImpl struct {
-    Location
-    name Name
-    typ Element
-    value Element
+	Location
+	name  Name
+	typ   Element
+	value Element
 }
 
 func (n *namedMemberInitializerImpl) Name() Name {
-    return n.name
+	return n.name
 }
 
 func (n *namedMemberInitializerImpl) Type() Element {
-    return n.typ
+	return n.typ
 }
 
 func (n *namedMemberInitializerImpl) Value() Element {
-    return n.value
+	return n.value
 }
 
 func (b *builderImpl) NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer {
-    return &namedMemberInitializerImpl{Location: b.Loc(), name: name, typ: typ, value: value}
+	return &namedMemberInitializerImpl{Location: b.Loc(), name: name, typ: typ, value: value}
 }
 
 type splatMemberInitializerImpl struct {
-    Location
-    typ Element
+	Location
+	typ Element
 }
 
 func (s *splatMemberInitializerImpl) Type() Element {
-    return s.typ
+	return s.typ
 }
 
 func (s *splatMemberInitializerImpl) IsSplat() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) SplatMemberInitializer(typ Element) SplatMemberInitializer {
-    return &splatMemberInitializerImpl{Location: b.Loc(), typ: typ}
+	return &splatMemberInitializerImpl{Location: b.Loc(), typ: typ}
 }
 
 type lambdaImpl struct {
-    Location
-    typeParameters TypeParameters
-    parameters []Parameter
-    body Element
+	Location
+	typeParameters TypeParameters
+	parameters     []Parameter
+	body           Element
 }
 
 func (l *lambdaImpl) TypeParameters() TypeParameters {
-    return l.typeParameters
+	return l.typeParameters
 }
 
 func (l *lambdaImpl) Parameters() []Parameter {
-    return l.parameters
+	return l.parameters
 }
 
 func (l *lambdaImpl) Body() Element {
-    return l.body
+	return l.body
 }
 
 func (b *builderImpl) Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda {
-    return &lambdaImpl{Location: b.Loc(), typeParameters: typeParameters, parameters: parameters, body: body}
+	return &lambdaImpl{Location: b.Loc(), typeParameters: typeParameters, parameters: parameters, body: body}
 }
 
 type parameterImpl struct {
-    Location
-    name Name
-    typ Element
-    deflt Element
+	Location
+	name  Name
+	typ   Element
+	deflt Element
 }
 
 func (p *parameterImpl) Name() Name {
-    return p.name
+	return p.name
 }
 
 func (p *parameterImpl) Type() Element {
-    return p.typ
+	return p.typ
 }
 
 func (p *parameterImpl) Default() Element {
-    return p.deflt
+	return p.deflt
 }
 
 func (p *parameterImpl) IsParameter() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) Parameter(name Name, typ Element, deflt Element) Parameter {
-    return &parameterImpl{Location: b.Loc(), name: name, typ: typ, deflt: deflt}
+	return &parameterImpl{Location: b.Loc(), name: name, typ: typ, deflt: deflt}
 }
 
 type typeParametersImpl struct {
-    Location
-    parameters []TypeParameter
-    wheres []Where
+	Location
+	parameters []TypeParameter
+	wheres     []Where
 }
 
 func (t *typeParametersImpl) Parameters() []TypeParameter {
-    return t.parameters
+	return t.parameters
 }
 
 func (t *typeParametersImpl) Wheres() []Where {
-    return t.wheres
+	return t.wheres
 }
 
 func (b *builderImpl) TypeParameters(parameters []TypeParameter, wheres []Where) TypeParameters {
-    return &typeParametersImpl{Location: b.Loc(), parameters: parameters, wheres: wheres}
+	return &typeParametersImpl{Location: b.Loc(), parameters: parameters, wheres: wheres}
 }
 
 type typeParameterImpl struct {
-    Location
-    name Name
-    constraint Element
+	Location
+	name       Name
+	constraint Element
 }
 
 func (t *typeParameterImpl) Name() Name {
-    return t.name
+	return t.name
 }
 
 func (t *typeParameterImpl) Constraint() Element {
-    return t.constraint
+	return t.constraint
 }
 
 func (t *typeParameterImpl) IsTypeParameter() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) TypeParameter(name Name, constraint Element) TypeParameter {
-    return &typeParameterImpl{Location: b.Loc(), name: name, constraint: constraint}
+	return &typeParameterImpl{Location: b.Loc(), name: name, constraint: constraint}
 }
 
 type whereImpl struct {
-    Location
-    left Element
-    right Element
+	Location
+	left  Element
+	right Element
 }
 
 func (w *whereImpl) Left() Element {
-    return w.left
+	return w.left
 }
 
 func (w *whereImpl) Right() Element {
-    return w.right
+	return w.right
 }
 
 func (w *whereImpl) IsWhere() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) Where(left, right Element) Where {
-    return &whereImpl{Location: b.Loc(), left: left, right: right}
+	return &whereImpl{Location: b.Loc(), left: left, right: right}
 }
 
 type varDefinitionImpl struct {
-    Location
-    name Name
-    typ Element
-    mutable bool
+	Location
+	name    Name
+	typ     Element
+	mutable bool
 }
 
 func (v *varDefinitionImpl) Name() Name {
-    return v.name
+	return v.name
 }
 
 func (v *varDefinitionImpl) Type() Element {
-    return v.typ
+	return v.typ
 }
 
 func (v *varDefinitionImpl) Mutable() bool {
-    return v.mutable
+	return v.mutable
 }
 
 func (v *varDefinitionImpl) IsField() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) VarDefinition(name Name, typ Element, mutable bool) VarDefinition {
-    return &varDefinitionImpl{Location: b.Loc(), name: name, typ: typ, mutable: mutable}
+	return &varDefinitionImpl{Location: b.Loc(), name: name, typ: typ, mutable: mutable}
 }
 
 type errorImpl struct {
-    Location
-    message string
+	Location
+	message string
 }
 
 func (e *errorImpl) Message() string {
-    return e.message
+	return e.message
 }
 
 func (b *builderImpl) Error(message string) Error {
-    return &errorImpl{Location: b.Loc(), message: message}
+	return &errorImpl{Location: b.Loc(), message: message}
 }
 
 func (b *builderImpl) Clone(context BuilderContext) Builder {
-    return &builderImpl{context: context, locations: b.locations}
+	return &builderImpl{context: context, locations: b.locations}
 }
-
