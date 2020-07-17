@@ -43,6 +43,9 @@ const (
 	// Add '+'
 	Add
 
+        // Bar '|'
+        Bar
+
 	// Sub '-'
 	Sub
 
@@ -217,6 +220,9 @@ const (
 	// Void 'void'
 	Void
 
+        // Where 'where'
+        Where
+
 	lastToken
 )
 
@@ -234,6 +240,7 @@ var tokens = [...]string{
 	LiteralString:    "<string>",
 	LiteralRune:      "<rune>",
 	Add:              "+",
+        Bar:              "|",
 	Sub:              "-",
 	Mult:             "*",
 	Div:              "/",
@@ -292,6 +299,7 @@ var tokens = [...]string{
 	Value:            "value",
 	Var:              "var",
 	Void:             "void",
+        Where:            "where",
 }
 
 func (t Token) String() string {

@@ -154,6 +154,7 @@ type SplatMemberInitializer interface {
 // Lambda is a lambda
 type Lambda interface {
     Element
+    TypeParameters() TypeParameters
     Parameters() []Parameter
     Body() Element
 }
@@ -165,6 +166,29 @@ type Parameter interface {
     Type() Element
     Default() Element
     IsParameter() bool
+}
+
+// TypeParameters is a type paramters clause
+type TypeParameters interface {
+    Element
+    Parameters() []TypeParameter
+    Wheres() []Where
+}
+
+// TypeParameter is a type parameter
+type TypeParameter interface {
+    Element
+    Name() Name
+    Constraint() Element
+    IsTypeParameter() bool
+}
+
+// Where is a type parameter where clause
+type Where interface {
+    Element
+    Left() Element
+    Right() Element
+    IsWhere() bool
 }
 
 // VarDefinition is a field or local variable defintion or declaration
@@ -207,7 +231,10 @@ type Builder interface {
     ArrayInitializer(mutable bool, elements []Element) ArrayInitializer
     NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer
     SplatMemberInitializer(typ Element) SplatMemberInitializer
-    Lambda(parameters []Parameter, body Element) Lambda
+    Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda
+    TypeParameters(parameters []TypeParameter, wheres []Where) TypeParameters
+    TypeParameter(name Name, constraint Element) TypeParameter
+    Where(left, right Element) Where
     Parameter(name Name, typ Element, deflt Element) Parameter
     VarDefinition(name Name, typ Element, mutable bool) VarDefinition
     Error(message string) Error
@@ -546,8 +573,13 @@ func (b *builderImpl) SplatMemberInitializer(typ Element) SplatMemberInitializer
 
 type lambdaImpl struct {
     Location
+    typeParameters TypeParameters
     parameters []Parameter
     body Element
+}
+
+func (l *lambdaImpl) TypeParameters() TypeParameters {
+    return l.typeParameters
 }
 
 func (l *lambdaImpl) Parameters() []Parameter {
@@ -558,8 +590,8 @@ func (l *lambdaImpl) Body() Element {
     return l.body
 }
 
-func (b *builderImpl) Lambda(parameters []Parameter, body Element) Lambda {
-    return &lambdaImpl{Location: b.Loc(), parameters: parameters, body: body}
+func (b *builderImpl) Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda {
+    return &lambdaImpl{Location: b.Loc(), typeParameters: typeParameters, parameters: parameters, body: body}
 }
 
 type parameterImpl struct {
@@ -587,6 +619,68 @@ func (p *parameterImpl) IsParameter() bool {
 
 func (b *builderImpl) Parameter(name Name, typ Element, deflt Element) Parameter {
     return &parameterImpl{Location: b.Loc(), name: name, typ: typ, deflt: deflt}
+}
+
+type typeParametersImpl struct {
+    Location
+    parameters []TypeParameter
+    wheres []Where
+}
+
+func (t *typeParametersImpl) Parameters() []TypeParameter {
+    return t.parameters
+}
+
+func (t *typeParametersImpl) Wheres() []Where {
+    return t.wheres
+}
+
+func (b *builderImpl) TypeParameters(parameters []TypeParameter, wheres []Where) TypeParameters {
+    return &typeParametersImpl{Location: b.Loc(), parameters: parameters, wheres: wheres}
+}
+
+type typeParameterImpl struct {
+    Location
+    name Name
+    constraint Element
+}
+
+func (t *typeParameterImpl) Name() Name {
+    return t.name
+}
+
+func (t *typeParameterImpl) Constraint() Element {
+    return t.constraint
+}
+
+func (t *typeParameterImpl) IsTypeParameter() bool {
+    return true
+}
+
+func (b *builderImpl) TypeParameter(name Name, constraint Element) TypeParameter {
+    return &typeParameterImpl{Location: b.Loc(), name: name, constraint: constraint}
+}
+
+type whereImpl struct {
+    Location
+    left Element
+    right Element
+}
+
+func (w *whereImpl) Left() Element {
+    return w.left
+}
+
+func (w *whereImpl) Right() Element {
+    return w.right
+}
+
+func (w *whereImpl) IsWhere() bool {
+    return true
+}
+
+func (b *builderImpl) Where(left, right Element) Where {
+    return &whereImpl{Location: b.Loc(), left: left, right: right}
 }
 
 type varDefinitionImpl struct {

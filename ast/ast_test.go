@@ -102,7 +102,8 @@ var _ = Describe("ast", func() {
             Expect(l.IsSplat()).To(Equal(true))
         })
         It("Lambda", func() {
-            l := b.Lambda(nil, nil)
+            l := b.Lambda(nil, nil, nil)
+            Expect(l.TypeParameters()).To(BeNil())
             Expect(l.Parameters()).To(BeNil())
             Expect(l.Body()).To(BeNil())
         })
@@ -112,6 +113,23 @@ var _ = Describe("ast", func() {
             Expect(l.Type()).To(BeNil())
             Expect(l.Default()).To(BeNil())
             Expect(l.IsParameter()).To(Equal(true))
+        })
+        It("TypeParameters", func() {
+            l := b.TypeParameters(nil, nil)
+            Expect(l.Parameters()).To(BeNil())
+            Expect(l.Wheres()).To(BeNil())
+        })
+        It("TypeParameter", func() {
+            l := b.TypeParameter(nil, nil)
+            Expect(l.Name()).To(BeNil())
+            Expect(l.Constraint()).To(BeNil())
+            Expect(l.IsTypeParameter()).To(Equal(true))
+        })
+        It("Where", func() {
+            l := b.Where(nil, nil)
+            Expect(l.Left()).To(BeNil())
+            Expect(l.Right()).To(BeNil())
+            Expect(l.IsWhere()).To(Equal(true))
         })
         It("VarDefinition", func() {
             l := b.VarDefinition(b.Name("name"), nil, false)

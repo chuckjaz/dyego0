@@ -76,13 +76,13 @@ func TestIdentifer(t *testing.T) {
 }
 
 func TestOperators(t *testing.T) {
-    parseString(t, "+-*/%()[]{};:?!,.&&||>>==!=<=<->..:=",
+    parseString(t, "+-*/%()[]{};:?!,.&&||>>==!=<=<->..:=|",
         tokens.Add, tokens.Sub, tokens.Mult, tokens.Div, tokens.Rem, tokens.LParen,
         tokens.RParen, tokens.LBrack, tokens.RBrack, tokens.LBrace, tokens.RBrace,
         tokens.Semi, tokens.Colon, tokens.Question, tokens.Not, tokens.Comma, tokens.Dot,
         tokens.LogicalAnd, tokens.LogicalOr, tokens.GreaterThan, tokens.GreaterThanEqual,
         tokens.Equal, tokens.NotEqual, tokens.LessThanEqual, tokens.LessThan, tokens.Arrow,
-        tokens.Range, tokens.Assign)
+        tokens.Range, tokens.Assign, tokens.Bar)
 }
 
 func TestPlat(t *testing.T) {
@@ -132,7 +132,7 @@ func TestReservedWords(t *testing.T) {
 }
 
 func TestIllegalOperators(t *testing.T) {
-    parseString(t, "& | ", tokens.Invalid, tokens.Invalid)
+    parseString(t, "& ", tokens.Invalid)
 }
 
 func TestLineCount(t *testing.T) {
