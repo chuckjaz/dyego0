@@ -22,6 +22,7 @@ type-parameters:                type-parameter (COMMA type-parameter)* [COMMA]
 type-parameter:                 NAME [COLON name-reference]
 type-members:                   type-member (COMMA type-member)* [COMMA]
 type-member:                    identifier-list COLON type-reference
+where-clause:                   WHERE type-reference EQ type-reference
 identifier-list:                NAME (COMMA NAME)* [COMMA]
 
 lambda-type-literal:            LBRACE [type-parameter-clause BAR] [formal-parameters] RBRACE AS type-reference
@@ -35,7 +36,7 @@ type-argument-clause:           LT type-arguments GT
 type-arguments:                 type-argument (COMMA type-argument)*
 type-argument:                  NAME EQ type-reference |
                                 type-reference
-type-expression:                type-primitive (selector | type-argument-clause)*
+type-expression:                type-primitive (selector | type-argument:-clause)*
 type-reference:                 type-expression ([NAME | SYMBOL] [type-expression])*
 
 intializer:                     read-only-array-initializer |

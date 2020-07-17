@@ -20,6 +20,7 @@ type Scanner struct {
     end    int
     msg    string
     flags  int
+    pseudo tokens.Token
     value  interface{}
 }
 
@@ -37,7 +38,7 @@ func NewScanner(src []byte, flags int) *Scanner {
 // instance that was moved forward.
 func (s *Scanner) Clone() *Scanner {
     return &Scanner{src: s.src, offset: s.offset, line: s.line, start: s.start,
-        end: s.end, msg: s.msg, flags: s.flags, value: s.value}
+      end: s.end, msg: s.msg, flags: s.flags, pseudo: s.pseudo, value: s.value}
 }
 
 // Line is the current line of the scanner
@@ -95,6 +96,11 @@ func identExtender(b byte) bool {
     return false
 }
 
+// PseudoToken returns the pseudo token for the current identifier
+func (s *Scanner) PseudoToken() tokens.Token {
+    return s.pseudo
+}
+
 // Next moves the scanner to the next token
 func (s *Scanner) Next() tokens.Token {
     s.end = s.offset
@@ -103,6 +109,8 @@ func (s *Scanner) Next() tokens.Token {
     src := s.src
     line := s.line
     result := tokens.Invalid
+    s.pseudo = tokens.Invalid
+    s.value = nil
 loop:
     for {
         b := src[offset]
@@ -213,7 +221,7 @@ loop:
                 offset++
                 result = tokens.LogicalOr
             } else {
-                result = tokens.Invalid
+                result = tokens.Bar
             }
 
         case '>':
@@ -241,7 +249,7 @@ loop:
             fallthrough
 
         // Reserved words
-        case 'a', 'b', 'c', 'd', 'e', 'f', 'i', 'l', 'm', 'o', 'p', 'r', 's', 't', 'v':
+        case 'a', 'b', 'c', 'd', 'e', 'f', 'i', 'l', 'm', 'o', 'p', 'r', 's', 't', 'v', 'w':
             switch b {
             case 'a':
                 if src[offset] == 's' && !identExtender(src[offset+1]) {
@@ -514,6 +522,14 @@ loop:
                         break loop
                     }
                 }
+            case 'w':
+                // where
+                if src[offset] == 'h' && src[offset+1] == 'e' && src[offset+2] == 'r' && src[offset+3] == 'e' {
+                    offset += 4
+                    result = tokens.Identifier
+                    s.pseudo = tokens.Where
+                    break loop
+                }
             }
             fallthrough
 
@@ -521,7 +537,7 @@ loop:
         case 'g', 'h', 'j',
             'k', 'n',
             'q',
-            'u', 'w', 'x', 'y', 'z',
+            'u', 'x', 'y', 'z',
             'A', 'B', 'C', 'D', 'E',
             'F', 'G', 'H', 'I', 'J',
             'K', 'L', 'M', 'N', 'O',
@@ -736,6 +752,7 @@ loop:
     }
     s.offset = offset
     s.start = start
+    s.end = offset
     s.line = line
     return result
 }
