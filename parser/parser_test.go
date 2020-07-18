@@ -10,9 +10,15 @@ import (
 
 	"dyego0/ast"
 	"dyego0/parser"
+	"dyego0/scanner"
 )
 
 var _ = Describe("parser", func() {
+	b := func() ast.Builder {
+		b := ast.NewBuilder(scan(""))
+		b.PushContext()
+		return b
+	}
 	Describe("literals", func() {
 		It("can parse a rune", func() {
 			l, ok := parse("'a'").(ast.LiteralRune)
@@ -123,11 +129,6 @@ var _ = Describe("parser", func() {
 		}
 		expectNil := func(element interface{}) {
 			Expect(element).To(BeNil())
-		}
-		b := func() ast.Builder {
-			b := ast.NewBuilder(scanner(""))
-			b.PushContext()
-			return b
 		}
 		p := func(name string) ast.Parameter {
 			return b().Parameter(b().Name(name), nil, nil)
@@ -249,14 +250,92 @@ var _ = Describe("parser", func() {
 			expectWheres(l.TypeParameters(), w("A", "Int"), w("B", "A"))
 		})
 	})
+	Describe("vocabulary", func() {
+		vocab := func(source string) ast.VocabularyLiteral {
+			l, ok := parse("let v = " + source).(ast.LetDefinition)
+			Expect(ok).To(Equal(true))
+			v, ok := l.Value().(ast.VocabularyLiteral)
+			return v
+		}
+		It("can parse an empty vocabulary", func() {
+			v := vocab("<| |>")
+			Expect(v.Members()).To(BeNil())
+		})
+		Describe("embedding", func() {
+			ve := func(source string) ast.VocabularyEmbedding {
+				v := vocab(source)
+				m := v.Members()
+				Expect(len(m)).To(Equal(1))
+				return m[0].(ast.VocabularyEmbedding)
+			}
+			expectNames := func(name []ast.Name, expected ...string) {
+				Expect(len(name)).To(Equal(len(expected)))
+				for i := range name {
+					Expect(name[i].Text()).To(Equal(expected[i]))
+				}
+			}
+			It("can parse a vocabulary embedding", func() {
+				e := ve("<| ...Other |>")
+				expectNames(e.Name(), "Other")
+			})
+			It("can parse a bocabulary embedding reference", func() {
+				e := ve("<| ...a::b |>")
+				expectNames(e.Name(), "a", "b")
+			})
+		})
+		Describe("operator", func() {
+			op := func(source string) ast.VocabularyOperatorDeclaration {
+				v := vocab("<| " + source + " |>")
+				Expect(len(v.Members())).To(Equal(1))
+				o, ok := v.Members()[0].(ast.VocabularyOperatorDeclaration)
+				Expect(ok).To(Equal(true))
+				return o
+			}
+			It("can parse an infix operator", func() {
+				o := op("infix operator `+` left")
+				Expect(o.Placement()).To(Equal(ast.Infix))
+				Expect(len(o.Names())).To(Equal(1))
+				Expect(o.Names()[0].Text()).To(Equal("+"))
+				Expect(o.Associativity()).To(Equal(ast.Left))
+			})
+			It("can parse an prefix operator", func() {
+				o := op("prefix operator `+` left")
+				Expect(o.Placement()).To(Equal(ast.Prefix))
+				Expect(len(o.Names())).To(Equal(1))
+				Expect(o.Names()[0].Text()).To(Equal("+"))
+				Expect(o.Associativity()).To(Equal(ast.Left))
+			})
+			It("can parse an postfix operator", func() {
+				o := op("postfix operator `+` left")
+				Expect(o.Placement()).To(Equal(ast.Postfix))
+				Expect(len(o.Names())).To(Equal(1))
+				Expect(o.Names()[0].Text()).To(Equal("+"))
+				Expect(o.Associativity()).To(Equal(ast.Left))
+			})
+			It("can parse right associative operator", func() {
+				o := op("infix operator `+` right")
+				Expect(o.Associativity()).To(Equal(ast.Right))
+			})
+			It("can parse multiple names in operator declaration", func() {
+				o := op("infix operator (`+`, `-`) right")
+				Expect(len(o.Names())).To(Equal(2))
+				Expect(o.Names()[0].Text()).To(Equal("+"))
+				Expect(o.Names()[1].Text()).To(Equal("-"))
+			})
+			It("can parse mutlpile operators", func() {
+				v := vocab("<| infix operator a left, infix operator b left |>")
+				Expect(len(v.Members())).To(Equal(2))
+			})
+		})
+	})
 })
 
-func scanner(text string) *parser.Scanner {
-	return parser.NewScanner(append([]byte(text), 0), 0)
+func scan(text string) *scanner.Scanner {
+	return scanner.NewScanner(append([]byte(text), 0), 0)
 }
 
 func parse(text string) ast.Element {
-	p := parser.NewParser(scanner(text))
+	p := parser.NewParser(scan(text))
 	r := p.Parse()
 	Expect(p.Errors()).To(BeNil())
 	return r

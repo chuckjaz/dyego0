@@ -1,4 +1,4 @@
-package parser
+package scanner
 
 import (
 	"dyego0/tokens"
@@ -20,7 +20,7 @@ type Scanner struct {
 	end    int
 	msg    string
 	flags  int
-	pseudo tokens.Token
+	pseudo tokens.PseudoToken
 	value  interface{}
 }
 
@@ -97,7 +97,7 @@ func identExtender(b byte) bool {
 }
 
 // PseudoToken returns the pseudo token for the current identifier
-func (s *Scanner) PseudoToken() tokens.Token {
+func (s *Scanner) PseudoToken() tokens.PseudoToken {
 	return s.pseudo
 }
 
@@ -109,7 +109,7 @@ func (s *Scanner) Next() tokens.Token {
 	src := s.src
 	line := s.line
 	result := tokens.Invalid
-	s.pseudo = tokens.Invalid
+	s.pseudo = tokens.InvalidPseudoToken
 	s.value = nil
 loop:
 	for {
@@ -190,10 +190,14 @@ loop:
 		case '=':
 			result = tokens.Equal
 		case ':':
-			if src[offset] == '=' {
+			switch src[offset] {
+			case '=':
 				offset++
 				result = tokens.Assign
-			} else {
+			case ':':
+				offset++
+				result = tokens.Scope
+			default:
 				result = tokens.Colon
 			}
 		case '?':
@@ -202,8 +206,13 @@ loop:
 			result = tokens.Semi
 		case '.':
 			if src[offset] == '.' {
-				offset++
-				result = tokens.Range
+				if src[offset+1] == '.' {
+					offset += 2
+					result = tokens.Spread
+				} else {
+					offset++
+					result = tokens.Range
+				}
 			} else {
 				result = tokens.Dot
 			}
@@ -217,10 +226,14 @@ loop:
 			}
 
 		case '|':
-			if src[offset] == '|' {
+			switch src[offset] {
+			case '|':
 				offset++
 				result = tokens.LogicalOr
-			} else {
+			case '>':
+				offset++
+				result = tokens.VocabularyEnd
+			default:
 				result = tokens.Bar
 			}
 
@@ -233,10 +246,14 @@ loop:
 			}
 
 		case '<':
-			if src[offset] == '=' {
+			switch src[offset] {
+			case '=':
 				offset++
 				result = tokens.LessThanEqual
-			} else {
+			case '|':
+				offset++
+				result = tokens.VocabularyStart
+			default:
 				result = tokens.LessThan
 			}
 
@@ -248,17 +265,39 @@ loop:
 			}
 			fallthrough
 
-		// Reserved words
+		// Reserved and pseudo reserved words
 		case 'a', 'b', 'c', 'd', 'e', 'f', 'i', 'l', 'm', 'o', 'p', 'r', 's', 't', 'v', 'w':
 			switch b {
 			case 'a':
-				if src[offset] == 's' && !identExtender(src[offset+1]) {
-					offset++
-					result = tokens.As
-					break loop
+				switch src[offset] {
+				case 's':
+					// as
+					if !identExtender(src[offset+1]) {
+						offset++
+						result = tokens.As
+						break loop
+					}
+				case 'f':
+					// after
+					if src[offset+1] == 't' && src[offset+2] == 'e' && src[offset+3] == 'r' &&
+						!identExtender(src[offset+4]) {
+						offset += 4
+						result = tokens.Identifier
+						s.pseudo = tokens.After
+						break loop
+					}
 				}
 			case 'b':
 				switch src[offset] {
+				case 'e':
+					// before
+					if src[offset+1] == 'f' && src[offset+2] == 'o' && src[offset+3] == 'r' && src[offset+4] == 'e' &&
+						!identExtender(src[offset+5]) {
+						offset += 5
+						result = tokens.Identifier
+						s.pseudo = tokens.Before
+						break loop
+					}
 				case 'o':
 					// boolean
 					if src[offset+1] == 'o' && src[offset+2] == 'l' &&
@@ -371,7 +410,16 @@ loop:
 						break loop
 					}
 				case 'n':
-					if src[offset+1] == 't' {
+					switch src[offset+1] {
+					case 'f':
+						// infix
+						if src[offset+2] == 'i' && src[offset+3] == 'x' && !identExtender(src[offset+4]) {
+							offset += 4
+							result = tokens.Identifier
+							s.pseudo = tokens.Infix
+							break loop
+						}
+					case 't':
 						// interface
 						if src[offset+2] == 'e' && src[offset+3] == 'r' && src[offset+4] == 'f' && src[offset+5] == 'a' &&
 							src[offset+6] == 'c' && src[offset+7] == 'e' && !identExtender(src[offset+8]) {
@@ -395,11 +443,25 @@ loop:
 					}
 				}
 			case 'l':
-				// let
-				if src[offset] == 'e' && src[offset+1] == 't' && !identExtender(src[offset+2]) {
-					offset += 2
-					result = tokens.Let
-					break loop
+				switch src[offset] {
+				case 'e':
+					switch src[offset+1] {
+					case 'f':
+						// left
+						if src[offset+2] == 't' && !identExtender(src[offset+3]) {
+							offset += 3
+							result = tokens.Identifier
+							s.pseudo = tokens.Left
+							break loop
+						}
+					case 't':
+						// let
+						if !identExtender(src[offset+2]) {
+							offset += 2
+							result = tokens.Let
+							break loop
+						}
+					}
 				}
 			case 'm':
 				switch src[offset] {
@@ -426,21 +488,45 @@ loop:
 					src[offset+3] == 'a' && src[offset+4] == 't' && src[offset+5] == 'o' &&
 					src[offset+6] == 'r' && !identExtender(src[offset+7]) {
 					offset += 7
-					result = tokens.Operator
+					result = tokens.Identifier
+					s.pseudo = tokens.Operator
 					break loop
 				}
 			case 'p':
-				// property
-				if src[offset] == 'r' && src[offset+1] == 'o' && src[offset+2] == 'p' &&
-					src[offset+3] == 'e' && src[offset+4] == 'r' && src[offset+5] == 't' &&
-					src[offset+6] == 'y' && !identExtender(src[offset+7]) {
-					offset += 7
-					result = tokens.Property
-					break loop
+				switch src[offset] {
+				case 'o':
+					// postfix
+					if src[offset+1] == 's' && src[offset+2] == 't' && src[offset+3] == 'f' &&
+						src[offset+4] == 'i' && src[offset+5] == 'x' && !identExtender(src[offset+6]) {
+						offset += 6
+						result = tokens.Identifier
+						s.pseudo = tokens.Postfix
+						break loop
+					}
+				case 'r':
+					switch src[offset+1] {
+					case 'e':
+						// prefix
+						if src[offset+2] == 'f' && src[offset+3] == 'i' && src[offset+4] == 'x' &&
+							!identExtender(src[offset+5]) {
+							offset += 5
+							result = tokens.Identifier
+							s.pseudo = tokens.Prefix
+							break loop
+						}
+					case 'o':
+						// property
+						if src[offset+2] == 'p' && src[offset+3] == 'e' && src[offset+4] == 'r' && src[offset+5] == 't' &&
+							src[offset+6] == 'y' && !identExtender(src[offset+7]) {
+							offset += 7
+							result = tokens.Property
+							break loop
+						}
+					}
 				}
 			case 'r':
-				// return
-				if src[offset] == 'e' {
+				switch src[offset] {
+				case 'e':
 					switch src[offset+1] {
 					case 'c':
 						// record
@@ -451,12 +537,22 @@ loop:
 							break loop
 						}
 					case 't':
+						// return
 						if src[offset+2] == 'u' && src[offset+3] == 'r' && src[offset+4] == 'n' &&
 							!identExtender(src[offset+5]) {
 							offset += 5
 							result = tokens.Return
 							break loop
 						}
+					}
+				case 'i':
+					// right
+					if src[offset+1] == 'g' && src[offset+2] == 'h' && src[offset+3] == 't' &&
+						!identExtender(src[offset+4]) {
+						offset += 4
+						result = tokens.Identifier
+						s.pseudo = tokens.Right
+						break loop
 					}
 				}
 			case 's':
@@ -524,7 +620,8 @@ loop:
 				}
 			case 'w':
 				// where
-				if src[offset] == 'h' && src[offset+1] == 'e' && src[offset+2] == 'r' && src[offset+3] == 'e' {
+				if src[offset] == 'h' && src[offset+1] == 'e' && src[offset+2] == 'r' && src[offset+3] == 'e' &&
+					!identExtender(src[offset+4]) {
 					offset += 4
 					result = tokens.Identifier
 					s.pseudo = tokens.Where
@@ -620,9 +717,6 @@ loop:
 					offset++
 					result = tokens.LiteralLong
 					s.value = int64(value)
-				case 'i':
-					offset++
-					fallthrough
 				case 'f':
 					fvalue, err := strconv.ParseFloat(string(src[start:offset]), 32)
 					offset++
@@ -641,8 +735,11 @@ loop:
 						s.msg = err.Error()
 					} else {
 						s.value = fvalue
-						result = tokens.LiteralFloat
+						result = tokens.LiteralDouble
 					}
+				case 'i':
+					offset++
+					fallthrough
 				default:
 					result = tokens.LiteralInt
 					s.value = int(value)
@@ -706,6 +803,21 @@ loop:
 				offset++
 			}
 			s.value = value
+		case '`':
+			copyFrom := start + 1
+			for {
+				b = src[offset]
+				offset++
+				switch b {
+				case '\n', '\r', '\\', '\x00':
+					result = tokens.Invalid
+					break loop
+				case '`':
+					s.value = string(src[copyFrom : offset-1])
+					result = tokens.Identifier
+					break loop
+				}
+			}
 		case '"':
 			var value string
 			copyFrom := start + 1

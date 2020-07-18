@@ -9,4 +9,10 @@ func TestToken(t *testing.T) {
 	if Token(1e6).String() != "<unknown>" {
 		t.Fail()
 	}
+	if Left.String() != "left" {
+		t.Fail()
+	}
+	if PseudoToken(1e6).String() != "<unknown pseudo token>" {
+		t.Fail()
+	}
 }

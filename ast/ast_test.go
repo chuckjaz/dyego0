@@ -138,6 +138,35 @@ var _ = Describe("ast", func() {
 			Expect(l.Mutable()).To(Equal(false))
 			Expect(l.IsField()).To(Equal(true))
 		})
+		It("LetDefinition", func() {
+			l := b.LetDefinition(nil, nil)
+			Expect(l.Name()).To(BeNil())
+			Expect(l.Value()).To(BeNil())
+			Expect(l.IsLetDefinition()).To(Equal(true))
+		})
+		It("VocabularyLiteral", func() {
+			l := b.VocabularyLiteral(nil)
+			Expect(l.Members()).To(BeNil())
+			Expect(l.IsVocabularyLiteral()).To(Equal(true))
+		})
+		It("VocabularyOperatorDeclaration", func() {
+			l := b.VocabularyOperatorDeclaration(nil, ast.Infix, nil, ast.Left)
+			Expect(l.Names()).To(BeNil())
+			Expect(l.Placement()).To(Equal(ast.Infix))
+			Expect(l.Precedence()).To(BeNil())
+			Expect(l.Associativity()).To(Equal(ast.Left))
+		})
+		It("VocabularyOperatorPrecedence", func() {
+			l := b.VocabularyOperatorPrecedence(nil, ast.Infix, ast.Before)
+			Expect(l.Name()).To(BeNil())
+			Expect(l.Placement()).To(Equal(ast.Infix))
+			Expect(l.Relation()).To(Equal(ast.Before))
+		})
+		It("VocabularyEmbedding", func() {
+			l := b.VocabularyEmbedding(nil)
+			Expect(l.Name()).To(BeNil())
+			Expect(l.IsVocabularyEmbedding()).To(Equal(true))
+		})
 		It("Error", func() {
 			l := b.Error("message")
 			Expect(l.Message()).To(Equal("message"))
