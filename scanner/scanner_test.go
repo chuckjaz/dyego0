@@ -1,10 +1,12 @@
-package parser
+package scanner
 
-import "testing"
-import "strings"
-import "go/token"
+import (
+	"go/token"
+	"strings"
+	"testing"
 
-import "dyego0/tokens"
+	"dyego0/tokens"
+)
 
 func paniced(fn func()) bool {
 	paniced := false
@@ -76,13 +78,14 @@ func TestIdentifer(t *testing.T) {
 }
 
 func TestOperators(t *testing.T) {
-	parseString(t, "+-*/%()[]{};:?!,.&&||>>==!=<=<->..:=|",
+	parseString(t, "+-*/%()[]{};:?!,.&&||>>==!=<=<->..:=|<||>...::",
 		tokens.Add, tokens.Sub, tokens.Mult, tokens.Div, tokens.Rem, tokens.LParen,
 		tokens.RParen, tokens.LBrack, tokens.RBrack, tokens.LBrace, tokens.RBrace,
 		tokens.Semi, tokens.Colon, tokens.Question, tokens.Not, tokens.Comma, tokens.Dot,
 		tokens.LogicalAnd, tokens.LogicalOr, tokens.GreaterThan, tokens.GreaterThanEqual,
 		tokens.Equal, tokens.NotEqual, tokens.LessThanEqual, tokens.LessThan, tokens.Arrow,
-		tokens.Range, tokens.Assign, tokens.Bar)
+		tokens.Range, tokens.Assign, tokens.Bar, tokens.VocabularyStart, tokens.VocabularyEnd,
+		tokens.Spread, tokens.Scope)
 }
 
 func TestPlat(t *testing.T) {
@@ -122,13 +125,47 @@ func testReservedWord(t *testing.T, tokenList ...tokens.Token) {
 	}
 }
 
+func parseBytesForPseudo(t *testing.T, src []byte, expected ...tokens.PseudoToken) (token.Pos, int, int) {
+	scanner := NewScanner(src, 0)
+	var received tokens.Token
+	for _, token := range expected {
+		received = scanner.Next()
+		if received != tokens.Identifier {
+			t.Errorf("Expected '%v', received '%v'", tokens.Identifier, received)
+		}
+		if scanner.PseudoToken() != token {
+			t.Errorf("Expected '%v', receive '%v'", token, scanner.PseudoToken())
+		}
+	}
+	if scanner.Next() != tokens.EOF {
+		t.Error("Not enough tokens")
+	}
+	return scanner.Start(), scanner.Offset(), scanner.Line()
+}
+
+func parseStringForPseudo(t *testing.T, src string, expected ...tokens.PseudoToken) {
+	parseBytesForPseudo(t, append([]byte(src), 0), expected...)
+}
+
+func testPseudoReservedWord(t *testing.T, tokenList ...tokens.PseudoToken) {
+	for _, token := range tokenList {
+		text := token.String()
+		example := text + " " + text + " " + text + "r " + text
+		parseStringForPseudo(t, example, token, token, tokens.InvalidPseudoToken, token)
+	}
+}
+
 func TestReservedWords(t *testing.T) {
 	testReservedWord(t, tokens.As, tokens.Boolean, tokens.Break, tokens.Case, tokens.Continue,
 		tokens.Constraint, tokens.Default, tokens.Else, tokens.Enum, tokens.Float, tokens.For,
 		tokens.If, tokens.In, tokens.Int, tokens.Interface, tokens.Let, tokens.Match,
-		tokens.Method, tokens.Operator, tokens.Property, tokens.Record, tokens.Return,
-		tokens.String, tokens.Switch, tokens.True, tokens.Type, tokens.Var, tokens.Value,
-		tokens.Void)
+		tokens.Method, tokens.Property, tokens.Record, tokens.Return, tokens.String, tokens.Switch,
+		tokens.True, tokens.Type, tokens.Var, tokens.Value, tokens.Void)
+}
+
+func TestPseudoReservedWords(t *testing.T) {
+	testPseudoReservedWord(t, tokens.After, tokens.Before, tokens.Infix, tokens.Left, tokens.Operator, tokens.Postfix, tokens.Prefix,
+		tokens.Right, tokens.Where)
 }
 
 func TestIllegalOperators(t *testing.T) {

@@ -191,6 +191,14 @@ type Where interface {
 	IsWhere() bool
 }
 
+// LetDefinition is a constant or type declaration
+type LetDefinition interface {
+	Element
+	Name() Name
+	Value() Element
+	IsLetDefinition() bool
+}
+
 // VarDefinition is a field or local variable defintion or declaration
 type VarDefinition interface {
 	Element
@@ -198,6 +206,76 @@ type VarDefinition interface {
 	Type() Element
 	Mutable() bool
 	IsField() bool
+}
+
+// VocabularyLiteral is a vocabulary literal
+type VocabularyLiteral interface {
+	Element
+	Members() []Element
+	IsVocabularyLiteral() bool
+}
+
+// OperatorPlacement declares the placement of an operator
+type OperatorPlacement int
+
+const (
+	// Infix is an infix operator placement
+	Infix OperatorPlacement = iota
+
+	// Prefix is a prefix operator placement
+	Prefix
+
+	// Postfix is a postfix operator placement
+	Postfix
+
+	// UnspecifiedPlacement indicates the placement of an operator was not specified
+	UnspecifiedPlacement
+)
+
+// OperatorAssociativity is the associativity of an operator
+type OperatorAssociativity int
+
+const (
+	// Left declares an operator to be left associative
+	Left OperatorAssociativity = iota
+
+	// Right declares an operator to be right associative
+	Right
+)
+
+// OperatorPrecedenceRelation defines a partial ordering with other operators
+type OperatorPrecedenceRelation int
+
+const (
+	// Before indicates that the precedence is before the referenced operator
+	Before OperatorPrecedenceRelation = iota
+
+	// After indicates that the precedence is after the referenced operator
+	After
+)
+
+// VocabularyOperatorDeclaration is the declaration of an operator
+type VocabularyOperatorDeclaration interface {
+	Element
+	Names() []Name
+	Placement() OperatorPlacement
+	Precedence() VocabularyOperatorPrecedence
+	Associativity() OperatorAssociativity
+}
+
+// VocabularyOperatorPrecedence is the definition of an operator precedence
+type VocabularyOperatorPrecedence interface {
+	Element
+	Name() Name
+	Placement() OperatorPlacement
+	Relation() OperatorPrecedenceRelation
+}
+
+// VocabularyEmbedding is an embedding of a vocabulary
+type VocabularyEmbedding interface {
+	Element
+	Name() []Name
+	IsVocabularyEmbedding() bool
 }
 
 // Error is a error node that should be reported
@@ -236,6 +314,20 @@ type Builder interface {
 	Where(left, right Element) Where
 	Parameter(name Name, typ Element, deflt Element) Parameter
 	VarDefinition(name Name, typ Element, mutable bool) VarDefinition
+	LetDefinition(name Name, value Element) LetDefinition
+	VocabularyLiteral(members []Element) VocabularyLiteral
+	VocabularyOperatorDeclaration(
+		names []Name,
+		placement OperatorPlacement,
+		precedence VocabularyOperatorPrecedence,
+		associativity OperatorAssociativity,
+	) VocabularyOperatorDeclaration
+	VocabularyOperatorPrecedence(
+		name Name,
+		placement OperatorPlacement,
+		relation OperatorPrecedenceRelation,
+	) VocabularyOperatorPrecedence
+	VocabularyEmbedding(name []Name) VocabularyEmbedding
 	Error(message string) Error
 	Clone(context BuilderContext) Builder
 }
@@ -707,6 +799,131 @@ func (v *varDefinitionImpl) IsField() bool {
 
 func (b *builderImpl) VarDefinition(name Name, typ Element, mutable bool) VarDefinition {
 	return &varDefinitionImpl{Location: b.Loc(), name: name, typ: typ, mutable: mutable}
+}
+
+type letDefinitionImpl struct {
+	Location
+	name  Name
+	value Element
+}
+
+func (l *letDefinitionImpl) Name() Name {
+	return l.name
+}
+
+func (l *letDefinitionImpl) Value() Element {
+	return l.value
+}
+
+func (l *letDefinitionImpl) IsLetDefinition() bool {
+	return true
+}
+
+func (b *builderImpl) LetDefinition(name Name, value Element) LetDefinition {
+	return &letDefinitionImpl{Location: b.Loc(), name: name, value: value}
+}
+
+type vocabularyLiteralImpl struct {
+	Location
+	members []Element
+}
+
+func (v *vocabularyLiteralImpl) Members() []Element {
+	return v.members
+}
+
+func (v *vocabularyLiteralImpl) IsVocabularyLiteral() bool {
+	return true
+}
+
+func (b *builderImpl) VocabularyLiteral(members []Element) VocabularyLiteral {
+	return &vocabularyLiteralImpl{Location: b.Loc(), members: members}
+}
+
+type vocabularyOperatorDeclarationImpl struct {
+	Location
+	names         []Name
+	placement     OperatorPlacement
+	precedence    VocabularyOperatorPrecedence
+	associativity OperatorAssociativity
+}
+
+func (v *vocabularyOperatorDeclarationImpl) Names() []Name {
+	return v.names
+}
+
+func (v *vocabularyOperatorDeclarationImpl) Placement() OperatorPlacement {
+	return v.placement
+}
+
+func (v *vocabularyOperatorDeclarationImpl) Precedence() VocabularyOperatorPrecedence {
+	return v.precedence
+}
+
+func (v *vocabularyOperatorDeclarationImpl) Associativity() OperatorAssociativity {
+	return v.associativity
+}
+
+func (b *builderImpl) VocabularyOperatorDeclaration(
+	names []Name,
+	placement OperatorPlacement,
+	precedence VocabularyOperatorPrecedence,
+	associativity OperatorAssociativity,
+) VocabularyOperatorDeclaration {
+	return &vocabularyOperatorDeclarationImpl{
+		Location:      b.Loc(),
+		names:         names,
+		placement:     placement,
+		associativity: associativity,
+	}
+}
+
+type vocabularyOperatorPrecedenceImpl struct {
+	Location
+	name      Name
+	placement OperatorPlacement
+	relation  OperatorPrecedenceRelation
+}
+
+func (v *vocabularyOperatorPrecedenceImpl) Name() Name {
+	return v.name
+}
+
+func (v *vocabularyOperatorPrecedenceImpl) Placement() OperatorPlacement {
+	return v.placement
+}
+
+func (v *vocabularyOperatorPrecedenceImpl) Relation() OperatorPrecedenceRelation {
+	return v.relation
+}
+
+func (b *builderImpl) VocabularyOperatorPrecedence(
+	name Name,
+	placement OperatorPlacement,
+	relation OperatorPrecedenceRelation,
+) VocabularyOperatorPrecedence {
+	return &vocabularyOperatorPrecedenceImpl{
+		Location:  b.Loc(),
+		placement: placement,
+		relation:  relation,
+	}
+}
+
+type vocabularyEmbeddingImpl struct {
+	Location
+	name []Name
+}
+
+func (v *vocabularyEmbeddingImpl) Name() []Name {
+	return v.name
+}
+
+func (v *vocabularyEmbeddingImpl) IsVocabularyEmbedding() bool {
+	return true
+}
+
+func (b *builderImpl) VocabularyEmbedding(name []Name) VocabularyEmbedding {
+	return &vocabularyEmbeddingImpl{Location: b.Loc(), name: name}
 }
 
 type errorImpl struct {

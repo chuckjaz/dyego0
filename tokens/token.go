@@ -124,8 +124,20 @@ const (
 	// Range '..'
 	Range
 
+	// Spread '...''
+	Spread
+
 	// Assign ':='
 	Assign
+
+	// Scope '::'
+	Scope
+
+	// VocabularyStart "<|"
+	VocabularyStart
+
+	// VocabularyEnd "|>"
+	VocabularyEnd
 
 	// Platform '!!'
 	Platform
@@ -187,9 +199,6 @@ const (
 	// Method 'method'
 	Method
 
-	// Operator 'operator'
-	Operator
-
 	// Property 'property'
 	Property
 
@@ -219,9 +228,6 @@ const (
 
 	// Void 'void'
 	Void
-
-	// Where 'where'
-	Where
 
 	lastToken
 )
@@ -267,7 +273,9 @@ var tokens = [...]string{
 	LessThanEqual:    "<=",
 	Arrow:            "->",
 	Range:            "..",
+	Spread:           "...",
 	Assign:           ":=",
+	Scope:            "::",
 	Platform:         "!!",
 	As:               "as",
 	Boolean:          "boolean",
@@ -288,7 +296,6 @@ var tokens = [...]string{
 	Let:              "let",
 	Match:            "match",
 	Method:           "method",
-	Operator:         "operator",
 	Property:         "property",
 	Record:           "record",
 	Return:           "return",
@@ -298,8 +305,9 @@ var tokens = [...]string{
 	Type:             "type",
 	Value:            "value",
 	Var:              "var",
+	VocabularyStart:  "<|",
+	VocabularyEnd:    "|>",
 	Void:             "void",
-	Where:            "where",
 }
 
 func (t Token) String() string {
@@ -307,4 +315,63 @@ func (t Token) String() string {
 		return tokens[t]
 	}
 	return "<unknown>"
+}
+
+// PseudoToken are special identifiers taht influence parsing
+type PseudoToken int
+
+const (
+	// After is the pseudo token "after"
+	After PseudoToken = iota
+
+	// Before is the psuedo token "before"
+	Before
+
+	// Infix is the pseudo token "infix"
+	Infix
+
+	// Left is the pseudo token "left"
+	Left
+
+	// Operator it he pseudo token "opeartor"
+	Operator
+
+	// Postfix is the pseudo token "postfix"
+	Postfix
+
+	// Prefix is the pseudo token "prefix"
+	Prefix
+
+	// Right is the pseudo token "right"
+	Right
+
+	// Where is a pseudo token "where"
+	Where
+
+	lastPseudoToken
+
+	// InvalidPseudoToken is an out of band value for pseudo token
+	InvalidPseudoToken
+)
+
+var pseudoTokens = [...]string{
+	After:    "after",
+	Before:   "before",
+	Infix:    "infix",
+	Left:     "left",
+	Operator: "operator",
+	Prefix:   "prefix",
+	Postfix:  "postfix",
+	Right:    "right",
+	Where:    "where",
+}
+
+func (t PseudoToken) String() string {
+	if t >= 0 && t < lastPseudoToken {
+		return pseudoTokens[t]
+	}
+	if t == InvalidPseudoToken {
+		return "<invalid>"
+	}
+	return "<unknown pseudo token>"
 }

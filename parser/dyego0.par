@@ -1,73 +1,83 @@
-compilation-unit:               expression
+compilation-unit:                   expression
 
-expression:                     simple-expression ([NAME | SYMBOL] [simple-expression])* 
-simple-expression:              primitive (selector | call | lambda)*
-primitive:                      literal | 
-                                initializer |
-                                lambda |
-                                definition |
-                                LPAREN expression RPAREN
-selector:                       DOT NAME
-call:                           LPAREN [arguments] RPAREN
-arguments:                      argument (COMMA argument)* [COMMA]
-argument:                       NAME EQ expression |
-                                expression |
-                                SPLAT expression
-literal:                        LIT_STRING | LIT_RUNE | LIT_INT | LIT_BYTE | LIT_UINT | LIT_LONG | LIT_ULONG |
-                                LIT_FLOAT | LIT_DOUBLE | TRUE | FALSE | NULL
+expression:                         simple-expression ([NAME | SYMBOL] [simple-expression])* 
+simple-expression:                  primitive (selector | call | lambda)*
+primitive:                          literal | 
+                                    initializer |
+                                    lambda |
+                                    definition |
+                                    LPAREN expression RPAREN
+selector:                           DOT NAME
+call:                               LPAREN [arguments] RPAREN
+arguments:                          argument (COMMA argument)* [COMMA]
+argument:                           NAME EQ expression |
+                                    expression |
+                                    SPLAT expression
+literal:                            LIT_STRING | LIT_RUNE | LIT_INT | LIT_BYTE | LIT_UINT | LIT_LONG | LIT_ULONG |
+                                    LIT_FLOAT | LIT_DOUBLE | TRUE | FALSE | NULL
 
-type-literal:                   COLON_LT [type-parameter-clause BAR] [type-members] GT_COLON
-type-parameter-clause:          type-parameters where-clause*
-type-parameters:                type-parameter (COMMA type-parameter)* [COMMA]
-type-parameter:                 NAME [COLON name-reference]
-type-members:                   type-member (COMMA type-member)* [COMMA]
-type-member:                    identifier-list COLON type-reference
-where-clause:                   WHERE type-reference EQ type-reference
-identifier-list:                NAME (COMMA NAME)* [COMMA]
+type-literal:                       LT [type-parameter-clause BAR] [type-members] GT
+type-parameter-clause:              type-parameters where-clause*
+type-parameters:                    type-parameter (COMMA type-parameter)* [COMMA]
+type-parameter:                     NAME [COLON name-reference]
+type-members:                       type-member (COMMA type-member)* [COMMA]
+type-member:                        identifier-list COLON type-reference
+where-clause:                       WHERE type-reference EQ type-reference
+identifier-list:                    NAME (COMMA NAME)* [COMMA]
 
-lambda-type-literal:            LBRACE [type-parameter-clause BAR] [formal-parameters] RBRACE AS type-reference
+vocabulary-literal:                 LT_BAR [vocabular-members] BAR_LT
+vocabulary-members:                 vocabulary-member (COMMA vocabulary-member)* [COMMA]
+vocabulary-member:                  vocabulary-operator-declaration |
+                                    vocabulary-callable-declaration |
+                                    vocabular-embedding
+vocabulary-operator-declaration:    (INFIX | PREFIX | POSTFIX) OPERATOR vocabulary-names [vocabular-precedece-qualifier] [LEFT | RIGHT]
+vocabular-names:                    NAME |
+                                    LPAREN identifier-list RPAREN
+vocabulary-precedece-qualifier:     (BEFORE | AFTER) [INFIX | PREFIX | POSTFIX] NAME
 
-type-primitive:                 NAME |
-                                type-literal |
-                                lambda-type-literal
-                                LPAREN type-reference RPAREN
+lambda-type-literal:                LBRACE [type-parameter-clause BAR] [formal-parameters] RBRACE AS type-reference
 
-type-argument-clause:           LT type-arguments GT
-type-arguments:                 type-argument (COMMA type-argument)*
-type-argument:                  NAME EQ type-reference |
-                                type-reference
-type-expression:                type-primitive (selector | type-argument:-clause)*
-type-reference:                 type-expression ([NAME | SYMBOL] [type-expression])*
+type-primitive:                     NAME |
+                                    type-literal |
+                                    lambda-type-literal
+                                    LPAREN type-reference RPAREN
 
-intializer:                     read-only-array-initializer |
-                                mutable-array-initializer |
-                                read-only-object-initializer |
-                                mutable-object-initializer
-read-only-array-initializer:    LBRACK [ array-elements ] RBRACK
-mutable-array-initializer:      LBRACK BANG [ array-elements] BANG RBRACK
-array-elements:                 array-element (COMMA array-element)* [COMMA]
-array-element:                  expression |
-                                SPLAT expression
-read-only-object-initializer:   LBRACK [type-qualifier] [ member-initializers ] RBRACK
-mutable-object-initializer:     LBRACK_BANG [type-qualifier] [ member-initalizers ] BANG_RBRACK
-type-qualifier:                 LT type-reference GT
-member-initializers:            member-initializer (COMMA member-initializer) [COMMA]
-member-initializer:             NAME COLON expression |
-                                COLON expression |
-                                SPLAT expression
-lambda:                         RBRACE [type-parameters-clause BAR] [formal-parameters ARROW] expression LBRACE
-formal-parameters:              formal-parameter (COMMA formal-parameter)*
-formal-parameter:               NAME [ COLON type-reference ]
+type-argument-clause:               LT type-arguments GT
+type-arguments:                     type-argument (COMMA type-argument)*
+type-argument:                      NAME EQ type-reference |
+                                    type-reference
+type-expression:                    type-primitive (selector | type-argument:-clause)*
+type-reference:                     type-expression ([NAME | SYMBOL] [type-expression])*
 
-declaration:                    var-definition |
-                                let-definition 
+intializer:                         read-only-array-initializer |
+                                    mutable-array-initializer |
+                                    read-only-object-initializer |
+                                    mutable-object-initializer
+read-only-array-initializer:        LBRACK [ array-elements ] RBRACK
+mutable-array-initializer:          LBRACK BANG [ array-elements] BANG RBRACK
+array-elements:                     array-element (COMMA array-element)* [COMMA]
+array-element:                      expression |
+                                    SPLAT expression
+read-only-object-initializer:       LBRACK [type-qualifier] [ member-initializers ] RBRACK
+mutable-object-initializer:         LBRACK_BANG [type-qualifier] [ member-initalizers ] BANG_RBRACK
+type-qualifier:                     LT type-reference GT
+member-initializers:                member-initializer (COMMA member-initializer) [COMMA]
+member-initializer:                 NAME COLON expression |
+                                    COLON expression |
+                                    SPLAT expression
+lambda:                             RBRACE [type-parameters-clause BAR] [formal-parameters ARROW] expression LBRACE
+formal-parameters:                  formal-parameter (COMMA formal-parameter)*
+formal-parameter:                   NAME [ COLON type-reference ]
 
-let-definition:                 LET local-definitions |
-                                LET destructor-definitions
-var-definition:                 VAR local-declaration |
-                                VAR destructor-declaration
-local-definitions:              local-definition (COMMA local-definition)* [COMMA]
-local-definition:               NAME [COLON type-reference] EQ expression
-destructor-definition:          LBRACK destructure-fields RBRACK
-destructor-fields:              destructure-field (COMMA destructure-field)* [COMMA]
-destructor-field:               [VAR|LET] NAME [as NAME] [COLON type-reference]
+declaration:                        var-definition |
+                                    let-definition 
+
+let-definition:                     LET local-definitions |
+                                    LET destructor-definitions
+var-definition:                     VAR local-declaration |
+                                    VAR destructor-declaration
+local-definitions:                  local-definition (COMMA local-definition)* [COMMA]
+local-definition:                   NAME [COLON type-reference] EQ expression
+destructor-definition:              LBRACK destructure-fields RBRACK
+destructor-fields:                  destructure-field (COMMA destructure-field)* [COMMA]
+destructor-field:                   [VAR|LET] NAME [as NAME] [COLON type-reference]
