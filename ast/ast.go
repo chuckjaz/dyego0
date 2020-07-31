@@ -232,6 +232,15 @@ const (
 	UnspecifiedPlacement
 )
 
+func (p OperatorPlacement) String() string {
+    switch p {
+    case Infix: return "infix"
+    case Prefix: return "prefix"
+    case Postfix: return "postfix"
+    default: return "invalid placement"
+    }
+}
+
 // OperatorAssociativity is the associativity of an operator
 type OperatorAssociativity int
 
@@ -241,7 +250,18 @@ const (
 
 	// Right declares an operator to be right associative
 	Right
+
+    // UnspecifiedAssociativity is the value of associativity when it was not specified
+    UnspecifiedAssociativity
 )
+
+func (a OperatorAssociativity) String() string {
+    switch a {
+    case Left: return "left"
+    case Right: return "right"
+    default: return "invalid associativity"
+    }
+}
 
 // OperatorPrecedenceRelation defines a partial ordering with other operators
 type OperatorPrecedenceRelation int
@@ -253,6 +273,14 @@ const (
 	// After indicates that the precedence is after the referenced operator
 	After
 )
+
+func (r OperatorPrecedenceRelation) String() string {
+    switch r {
+    case Before: return "before"
+    case After: return "after"
+    default: return "invalid relation"
+    }
+}
 
 // VocabularyOperatorDeclaration is the declaration of an operator
 type VocabularyOperatorDeclaration interface {
@@ -874,6 +902,7 @@ func (b *builderImpl) VocabularyOperatorDeclaration(
 		Location:      b.Loc(),
 		names:         names,
 		placement:     placement,
+        precedence:    precedence,
 		associativity: associativity,
 	}
 }
@@ -904,6 +933,7 @@ func (b *builderImpl) VocabularyOperatorPrecedence(
 ) VocabularyOperatorPrecedence {
 	return &vocabularyOperatorPrecedenceImpl{
 		Location:  b.Loc(),
+        name: name,
 		placement: placement,
 		relation:  relation,
 	}
