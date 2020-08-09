@@ -1,6 +1,9 @@
-package parser_test
+package parser
 
 import (
+	"fmt"
+	"sort"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -8,8 +11,8 @@ import (
 
 	"go/token"
 
+	"dyego0/assert"
 	"dyego0/ast"
-	"dyego0/parser"
 	"dyego0/scanner"
 )
 
@@ -328,20 +331,176 @@ var _ = Describe("parser", func() {
 			})
 		})
 	})
+	e := func(source string) ast.Element {
+		actualSource := "...dyego," + source
+		element := parse(actualSource)
+		sequence := element.(ast.Sequence)
+		return sequence.Right()
+	}
+	Describe("prefix expressions", func() {
+		expectName := func(n ast.Element, name string) {
+			nameElement, ok := n.(ast.Name)
+			Expect(ok).To(BeTrue())
+			Expect(nameElement.Text()).To(Equal(name))
+		}
+		i := func(n ast.Element, value int) {
+			v, ok := n.(ast.LiteralInt)
+			Expect(ok).To(BeTrue())
+			Expect(v.Value()).To(Equal(value))
+		}
+		expectOp := func(e ast.Element) (ast.Element, ast.Element, []ast.Element) {
+			call, ok := e.(ast.Call)
+			Expect(ok).To(BeTrue())
+			selection, ok := call.Target().(ast.Selection)
+			Expect(ok).To(BeTrue())
+			return selection.Member(), selection.Target(), call.Arguments()
+		}
+		expectUnaryOp := func(e ast.Element, name string) ast.Element {
+			member, target, arguments := expectOp(e)
+			expectName(member, name)
+			Expect(len(arguments)).To(Equal(0))
+			return target
+		}
+		expectBinaryOp := func(e ast.Element, name string) (ast.Element, ast.Element) {
+			member, target, arguments := expectOp(e)
+			expectName(member, name)
+			Expect(len(arguments)).To(Equal(1))
+			return target, arguments[0]
+		}
+		It("can parse a prefix expression", func() {
+			v := e("+1")
+			t := expectUnaryOp(v, "+")
+			i(t, 1)
+		})
+		It("can parse a binary expression", func() {
+			v := e("1 + 2")
+			l, r := expectBinaryOp(v, "+")
+			i(l, 1)
+			i(r, 2)
+		})
+		It("can distinquish precedence", func() {
+			v := e("1 * 2 + 3 * 4")
+			lm, rm := expectBinaryOp(v, "+")
+			e1, e2 := expectBinaryOp(lm, "*")
+			e3, e4 := expectBinaryOp(rm, "*")
+			i(e1, 1)
+			i(e2, 2)
+			i(e3, 3)
+			i(e4, 4)
+		})
+		It("can handle mix of operator types", func() {
+			v := e("++1++ + ++2++")
+			l, r := expectBinaryOp(v, "+")
+			expectUnaryOp(expectUnaryOp(l, "++"), "postfix ++")
+			expectUnaryOp(expectUnaryOp(r, "++"), "postfix ++")
+		})
+		It("can handle multiple prefix/postfix operators", func() {
+			v := e("++ ++ 1 ++ ++")
+			expectUnaryOp(expectUnaryOp(expectUnaryOp(expectUnaryOp(v, "++"), "++"), "postfix ++"), "postfix ++")
+		})
+	})
 })
 
 func scan(text string) *scanner.Scanner {
 	return scanner.NewScanner(append([]byte(text), 0), 0)
 }
 
+var dyego0VocabularySource = strings.ReplaceAll(`
+let dyego = <| 
+  postfix operator (@++@, @--@, @?.@, @?@) right,
+  prefix operator (@+@, @-@, @--@, @++@) right,
+  infix operator (@as@, @as?@) left,
+  infix operator (@*@, @/@, @%@) left,
+  infix operator (@+@, @-@) left,
+  infix operator @..@ left,
+  infix operator @?:@ left,
+  infix operator (@in@, @!in@, @is@, @!is@) left,
+  infix operator (@<@, @>@, @>=@, @<=@) left,
+  infix operator (@==@, @!=@) left,
+  infix operator @&&@ left,
+  infix operator @||@ left,
+  infix operator (@=@, @+=@, @*=@, @/=@, @%=@) right
+|>`, "@", "`")
+
+func lineMapOf(source string) []int {
+	result := []int{0}
+	for i, ch := range source {
+		if ch == '\n' {
+			result = append(result, i+1)
+		}
+	}
+	return append(result, len(source))
+}
+
+func lineColumnOf(lineMap []int, offset int) (int, int) {
+	line0 := sort.SearchInts(lineMap, offset)
+	if lineMap[line0] != offset {
+		line0--
+	}
+	if line0 < len(lineMap) {
+		return line0 + 1, offset - lineMap[line0] + 1
+	} else if lineMap != nil {
+		return line0, offset - lineMap[line0-1] + 1
+	} else {
+		return 1, offset + 1
+	}
+}
+
+func lineLenOf(lineMap []int, line int) int {
+	if lineMap == nil {
+		return 0
+	}
+	return lineMap[line] - lineMap[line-1]
+}
+
+func printErrors(errors []ast.Error, source string) {
+	if errors != nil {
+		lineMap := lineMapOf(source)
+		for _, err := range errors {
+			offset := int(err.Start())
+			endOffset := int(err.End())
+			line, col := lineColumnOf(lineMap, offset)
+			errorLen := endOffset - offset
+			lineLength := lineLenOf(lineMap, line)
+			if lineLength-col < errorLen {
+				errorLen = lineLength - col
+			}
+			println(err.Message())
+			println(source[lineMap[line-1]:lineMap[line]])
+			println(fmt.Sprintf("%s%s", strings.Repeat(" ", col-1), strings.Repeat("^", errorLen)))
+		}
+	}
+}
+
+func parseVocabulary(source string) vocabulary {
+	p := NewParser(scan(source), newVocabularyScope())
+	element := p.Parse()
+	printErrors(p.Errors(), source)
+	assert.Assert(len(p.Errors()) == 0, "dyego0 vocabulary source has errors %#v", p.Errors())
+	let := element.(ast.LetDefinition)
+	vl := let.Value().(ast.VocabularyLiteral)
+	emptyScope := newVocabularyScope()
+	v, errors := buildVocabulary(emptyScope, vl)
+	assert.Assert(len(errors) == 0, "dyego0 vocabulary source has errors %#v", errors)
+	return v
+}
+
+var defaultScope vocabularyScope
+
 func parse(text string) ast.Element {
-	p := parser.NewParser(scan(text))
+	p := NewParser(scan(text), defaultScope)
 	r := p.Parse()
+	printErrors(p.Errors(), text)
 	Expect(p.Errors()).To(BeNil())
 	return r
 }
 
 func TestErrors(t *testing.T) {
+	dyegoVocabulary := parseVocabulary(dyego0VocabularySource)
+	scope := newVocabularyScope()
+	scope.members["dyego"] = dyegoVocabulary
+	defaultScope = scope
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Errors Suite")
 }

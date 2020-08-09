@@ -1,6 +1,11 @@
-compilation-unit:                   expression
+compilation-unit:                   sequence
 
-expression:                         simple-expression ([NAME | SYMBOL] [simple-expression])* 
+sequence:                           sequencePart (COMMA sequencePart)* [COMMA]
+sequencePart:                       SPREAD (vocabularyReference | expression) |
+                                    expression
+vocabularyReference:                NAME (SCOPE NAME)*
+
+expression:                         [NAME | SYMBOL]?op simple-expression ([NAME | SYMBOL]?op [simple-expression])* 
 simple-expression:                  primitive (selector | call | lambda)*
 primitive:                          literal | 
                                     initializer |
@@ -65,7 +70,7 @@ member-initializers:                member-initializer (COMMA member-initializer
 member-initializer:                 NAME COLON expression |
                                     COLON expression |
                                     SPLAT expression
-lambda:                             RBRACE [type-parameters-clause BAR] [formal-parameters ARROW] expression LBRACE
+lambda:                             RBRACE [type-parameters-clause BAR] [formal-parameters ARROW] sequence LBRACE
 formal-parameters:                  formal-parameter (COMMA formal-parameter)*
 formal-parameter:                   NAME [ COLON type-reference ]
 

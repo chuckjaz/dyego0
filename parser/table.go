@@ -22,6 +22,7 @@ type precedenceLevel interface {
 	Higher() precedenceLevel
 	Lower() precedenceLevel
 	IsHigherThan(other precedenceLevel) bool
+	Level() int
 }
 
 func newPrecedenceLevel() precedenceLevel {
@@ -89,6 +90,13 @@ func (p *precedenceLevelImpl) IsHigherThan(other precedenceLevel) bool {
 	return false
 }
 
+func (p *precedenceLevelImpl) Level() int {
+	if p.lower != nil {
+		return p.lower.Level() + 1
+	}
+	return 0
+}
+
 // operator
 
 type operator interface {
@@ -113,6 +121,20 @@ func (o *operatorImpl) Levels() []precedenceLevel {
 
 func (o *operatorImpl) Associativities() []ast.OperatorAssociativity {
 	return o.associativities
+}
+
+func (o *operatorImpl) String() string {
+	result := "operator " + o.name
+	addPlace := func(placement ast.OperatorPlacement) {
+		level := o.levels[placement]
+		if level != nil {
+			result += fmt.Sprintf(" %s(%d)", placement, level.Level())
+		}
+	}
+	addPlace(ast.Infix)
+	addPlace(ast.Prefix)
+	addPlace(ast.Postfix)
+	return result
 }
 
 func newOperator(
@@ -150,6 +172,14 @@ func (v *vocabularyImpl) Scope() vocabularyScope {
 	return v.scope
 }
 
+func (v *vocabularyImpl) String() string {
+	result := "vocabulary:\n"
+	for _, element := range v.members {
+		result += fmt.Sprintf("  %s\n", element)
+	}
+	return result
+}
+
 // vocabularyScope
 
 type vocabularyScopeImpl struct {
@@ -178,45 +208,115 @@ type vocabularyError struct {
 
 type vocabularyErrors []vocabularyError
 
+// vocabularyEmbeddingContext
+type vocabularyEmbeddingContext struct {
+	result        *vocabularyImpl
+	errors        vocabularyErrors
+	rootLevel     precedenceLevel
+	lowestLevel   precedenceLevel
+	precedenceMap map[precedenceLevel]precedenceLevel
+}
+
+func newVocabularyEmbeddingContext() *vocabularyEmbeddingContext {
+	level := newPrecedenceLevel()
+	return &vocabularyEmbeddingContext{
+		result:        newVocabulary(),
+		rootLevel:     level,
+		lowestLevel:   level,
+		precedenceMap: make(map[precedenceLevel]precedenceLevel),
+	}
+}
+
+func (c *vocabularyEmbeddingContext) mappedPrecedence(precedence precedenceLevel) precedenceLevel {
+	if precedence == nil {
+		return c.rootLevel
+	}
+	level, ok := c.precedenceMap[precedence]
+	if ok {
+		return level
+	}
+	parent := c.mappedPrecedence(precedence.Higher())
+	result := parent.MakeLower()
+	c.precedenceMap[precedence] = result
+	return result
+}
+
+func (c *vocabularyEmbeddingContext) mappedPrecedences(precedence []precedenceLevel) []precedenceLevel {
+	result := []precedenceLevel{nil, nil, nil}
+	for placement, level := range precedence {
+		if level != nil {
+			result[placement] = c.mappedPrecedence(level)
+		}
+	}
+	return result
+}
+
+func (c *vocabularyEmbeddingContext) reportError(element ast.Element, message string, args ...interface{}) {
+	c.errors = append(c.errors, vocabularyError{
+		element: element,
+		message: fmt.Sprintf(message, args...),
+	})
+}
+
+func (c *vocabularyEmbeddingContext) embedVocabulary(embeddedVocabulary *vocabularyImpl, embedding ast.Element) {
+	members := embeddedVocabulary.members
+	for _, member := range members {
+		switch m := member.(type) {
+		case operator:
+			c.recordOperator(embedding, m.Name(), c.mappedPrecedences(m.Levels()), m.Associativities())
+		}
+	}
+	last := c.rootLevel
+	for {
+		next := last.Lower()
+		if next == nil {
+			break
+		}
+		last = next
+	}
+	c.lowestLevel = last
+}
+
+func (c *vocabularyEmbeddingContext) recordOperator(
+	element ast.Element,
+	name string,
+	levels []precedenceLevel,
+	associativities []ast.OperatorAssociativity,
+) {
+	member, ok := c.result.Get(name)
+	if ok {
+		switch m := member.(type) {
+		case operator:
+			for placement := ast.OperatorPlacement(0); placement < ast.UnspecifiedPlacement; placement++ {
+				if levels[placement] != nil {
+					if m.Levels()[placement] == nil {
+						m.Levels()[placement] = levels[placement]
+						m.Associativities()[placement] = associativities[placement]
+					} else {
+						c.reportError(
+							element,
+							"An %s operator '%s' already defined",
+							placement.String(),
+							m.Name(),
+						)
+					}
+				}
+			}
+		}
+		return
+	}
+	op := newOperator(
+		name,
+		levels,
+		associativities,
+	)
+	c.result.members[name] = op
+}
+
 // buildVocabulary
 
 func buildVocabulary(scope vocabularyScope, vocabularyLiteral ast.VocabularyLiteral) (vocabulary, vocabularyErrors) {
-	var errors vocabularyErrors
-	result := newVocabulary()
-	rootLevel := newPrecedenceLevel()
-	precedenceMap := make(map[precedenceLevel]precedenceLevel)
-
-	var mappedPrecedence func(precedenceLevel) precedenceLevel
-	mappedPrecedence = func(precedence precedenceLevel) precedenceLevel {
-		if precedence == nil {
-			return rootLevel
-		}
-		level, ok := precedenceMap[precedence]
-		if ok {
-			return level
-		}
-		parent := mappedPrecedence(precedence.Higher())
-		result := parent.MakeLower()
-		precedenceMap[precedence] = result
-		return result
-	}
-
-	mappedPrecedences := func(precedence []precedenceLevel) []precedenceLevel {
-		result := []precedenceLevel{nil, nil, nil}
-		for placement, level := range precedence {
-			if level != nil {
-				result[placement] = mappedPrecedence(level)
-			}
-		}
-		return result
-	}
-
-	reportError := func(element ast.Element, message string, args ...interface{}) {
-		errors = append(errors, vocabularyError{
-			element: element,
-			message: fmt.Sprintf(message, args...),
-		})
-	}
+	c := newVocabularyEmbeddingContext()
 
 	lookupVocabulary := func(nameList []ast.Name) vocabulary {
 		currentScope := scope
@@ -224,12 +324,12 @@ func buildVocabulary(scope vocabularyScope, vocabularyLiteral ast.VocabularyLite
 		var lastName ast.Name
 		for _, name := range nameList {
 			if currentScope == nil {
-				reportError(lastName, "Expected '%s' to be a vocabulary scope", lastName.Text())
+				c.reportError(lastName, "Expected '%s' to be a vocabulary scope", lastName.Text())
 				return nil
 			}
 			lookup, ok := currentScope.Get(name.Text())
 			if !ok {
-				reportError(name, "Undefined vocabulary '%s'", name.Text())
+				c.reportError(name, "Undefined vocabulary '%s'", name.Text())
 				return nil
 			}
 			switch v := lookup.(type) {
@@ -244,62 +344,15 @@ func buildVocabulary(scope vocabularyScope, vocabularyLiteral ast.VocabularyLite
 			lastName = name
 		}
 		if embeddedVocabulary == nil {
-			reportError(lastName, "Expected '%s' to be a vocabulary", lastName.Text())
+			c.reportError(lastName, "Expected '%s' to be a vocabulary", lastName.Text())
 			return nil
 		}
 		return embeddedVocabulary
 	}
 
-	recordOperator := func(
-		element ast.Element,
-		name string,
-		levels []precedenceLevel,
-		associativities []ast.OperatorAssociativity,
-	) {
-		member, ok := result.Get(name)
-		if ok {
-			switch m := member.(type) {
-			case operator:
-				for placement := ast.OperatorPlacement(0); placement < ast.UnspecifiedPlacement; placement++ {
-					if levels[placement] != nil {
-						if m.Levels()[placement] == nil {
-							m.Levels()[placement] = levels[placement]
-							m.Associativities()[placement] = associativities[placement]
-						} else {
-							reportError(
-								element,
-								"An %s operator '%s' already defined",
-								placement.String(),
-								m.Name(),
-							)
-						}
-					}
-				}
-			}
-			return
-		}
-		op := newOperator(
-			name,
-			levels,
-			associativities,
-		)
-		result.members[name] = op
-	}
-
-	embedVocabulary := func(embeddedVocabulary *vocabularyImpl, embedding ast.VocabularyEmbedding) {
-		members := embeddedVocabulary.members
-		for _, member := range members {
-			switch m := member.(type) {
-			case operator:
-				recordOperator(embedding, m.Name(), mappedPrecedences(m.Levels()), m.Associativities())
-
-			}
-		}
-	}
-
 	findLowestPrecedence := func() precedenceLevel {
-		current := rootLevel
-		last := rootLevel
+		current := c.rootLevel
+		last := c.rootLevel
 		for current != nil {
 			last = current
 			current = current.Lower()
@@ -316,7 +369,7 @@ func buildVocabulary(scope vocabularyScope, vocabularyLiteral ast.VocabularyLite
 			if embeddedVocabulary == nil {
 				continue
 			}
-			embedVocabulary(embeddedVocabulary.(*vocabularyImpl), m)
+			c.embedVocabulary(embeddedVocabulary.(*vocabularyImpl), m)
 		case ast.VocabularyOperatorDeclaration:
 			continue
 		default:
@@ -352,14 +405,14 @@ func buildVocabulary(scope vocabularyScope, vocabularyLiteral ast.VocabularyLite
 			precedence := lowestPrecedence
 			precedenceDeclaration := m.Precedence()
 			if precedenceDeclaration != nil {
-				lookup, ok := result.members[precedenceDeclaration.Name().Text()]
+				lookup, ok := c.result.members[precedenceDeclaration.Name().Text()]
 				if !ok {
-					reportError(precedenceDeclaration.Name(), "Undeclared identifier '%s'", precedenceDeclaration.Name().Text())
+					c.reportError(precedenceDeclaration.Name(), "Undeclared identifier '%s'", precedenceDeclaration.Name().Text())
 					continue
 				}
 				referencedOperator, ok := lookup.(operator)
 				if !ok {
-					reportError(precedenceDeclaration.Name(), "'%s' does not refer to an operator", precedenceDeclaration.Name().Text())
+					c.reportError(precedenceDeclaration.Name(), "'%s' does not refer to an operator", precedenceDeclaration.Name().Text())
 					continue
 				}
 				referencedPlacement := precedenceDeclaration.Placement()
@@ -367,7 +420,7 @@ func buildVocabulary(scope vocabularyScope, vocabularyLiteral ast.VocabularyLite
 					for placement := ast.OperatorPlacement(0); placement < ast.UnspecifiedPlacement; placement++ {
 						if referencedOperator.Associativities()[placement] != ast.UnspecifiedAssociativity {
 							if referencedPlacement != ast.UnspecifiedPlacement {
-								reportError(
+								c.reportError(
 									precedenceDeclaration,
 									"Ambigious operator reference, both %s and %s are defined",
 									referencedPlacement,
@@ -380,7 +433,7 @@ func buildVocabulary(scope vocabularyScope, vocabularyLiteral ast.VocabularyLite
 				}
 				precedence = referencedOperator.Levels()[referencedPlacement]
 				if precedence == nil {
-					reportError(
+					c.reportError(
 						precedenceDeclaration,
 						"No %s placement defined for operator '%s'",
 						referencedPlacement,
@@ -403,9 +456,9 @@ func buildVocabulary(scope vocabularyScope, vocabularyLiteral ast.VocabularyLite
 
 			for _, name := range m.Names() {
 				levels, associativities := levelsAndAssociativities(placement, precedence, associativity)
-				recordOperator(name, name.Text(), levels, associativities)
+				c.recordOperator(name, name.Text(), levels, associativities)
 			}
 		}
 	}
-	return result, errors
+	return c.result, c.errors
 }
