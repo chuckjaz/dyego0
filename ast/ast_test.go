@@ -67,6 +67,17 @@ var _ = Describe("ast", func() {
 			Expect(l.Target()).To(BeNil())
 			Expect(l.Member()).To(BeNil())
 		})
+        It("Sequence", func() {
+            s := b.Sequence(nil, nil)
+            Expect(s.Left()).To(BeNil())
+            Expect(s.Right()).To(BeNil())
+            Expect(s.IsSequence()).To(Equal(true))
+        })
+        It("Spread", func() {
+            s := b.Spread(nil)
+            Expect(s.Target()).To(BeNil())
+            Expect(s.IsSpread()).To(Equal(true))
+        })
 		It("Call", func() {
 			l := b.Call(nil, nil)
 			Expect(l.Target()).To(BeNil())
@@ -171,6 +182,12 @@ var _ = Describe("ast", func() {
 			l := b.Error("message")
 			Expect(l.Message()).To(Equal("message"))
 		})
+        It("DirectError", func() {
+            l := b.DirectError(token.Pos(1), token.Pos(2), "message")
+            Expect(l.Message()).To(Equal("message"))
+            Expect(l.Start()).To(Equal(token.Pos(1)))
+            Expect(l.End()).To(Equal(token.Pos(2)))
+        })
 	})
 	Describe("location", func() {
 		It("can push a context", func() {

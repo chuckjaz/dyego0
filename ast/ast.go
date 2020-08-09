@@ -100,6 +100,21 @@ type Selection interface {
 	Member() Name
 }
 
+// Sequence is a sequence of expressions
+type Sequence interface {
+    Element
+    Left() Element
+    Right() Element
+    IsSequence() bool
+}
+
+// Spread is a spread expression prefix
+type Spread interface {
+    Element
+    Target() Element
+    IsSpread() bool
+}
+
 // Call is a call expression
 type Call interface {
 	Element
@@ -339,7 +354,9 @@ type Builder interface {
 	LiteralBoolean(value bool) LiteralBoolean
 	LiteralString(value string) LiteralString
 	LiteralNull() LiteralNull
+    Sequence(left, right Element) Sequence
 	Selection(target Element, member Name) Selection
+    Spread(target Element) Spread
 	Call(target Element, arguments []Element) Call
 	NamedArgument(name Name, value Element) NamedArgument
 	ObjectInitializer(mutable bool, members []MemberInitializer) ObjectInitializer
@@ -367,6 +384,7 @@ type Builder interface {
 	) VocabularyOperatorPrecedence
 	VocabularyEmbedding(name []Name) VocabularyEmbedding
 	Error(message string) Error
+    DirectError(start, end token.Pos, message string) Error
 	Clone(context BuilderContext) Builder
 }
 
@@ -574,6 +592,45 @@ func (l *selectionImpl) Member() Name {
 
 func (b *builderImpl) Selection(target Element, member Name) Selection {
 	return &selectionImpl{Location: b.Loc(), target: target, member: member}
+}
+
+type sequenceImpl struct {
+    Location
+    left Element
+    right Element
+}
+
+func (s *sequenceImpl) Left() Element {
+    return s.left
+}
+
+func (s *sequenceImpl) Right() Element {
+    return s.right
+}
+
+func (s *sequenceImpl) IsSequence() bool {
+    return true
+}
+
+func (b *builderImpl) Sequence(left, right Element) Sequence{
+    return &sequenceImpl{Location: b.Loc(), left: left, right: right}
+}
+
+type spreadImpl struct {
+    Location
+    target Element
+}
+
+func (s *spreadImpl) Target() Element {
+    return s.target
+}
+
+func (s *spreadImpl) IsSpread() bool {
+    return true
+}
+
+func (b *builderImpl) Spread(target Element) Spread {
+    return &spreadImpl{Location: b.Loc(), target: target}
 }
 
 type callImpl struct {
@@ -977,6 +1034,10 @@ func (e *errorImpl) Message() string {
 
 func (b *builderImpl) Error(message string) Error {
 	return &errorImpl{Location: b.Loc(), message: message}
+}
+
+func (b *builderImpl) DirectError(start, end token.Pos, message string) Error {
+    return &errorImpl{Location: NewLocation(start, end), message: message}
 }
 
 func (b *builderImpl) Clone(context BuilderContext) Builder {
