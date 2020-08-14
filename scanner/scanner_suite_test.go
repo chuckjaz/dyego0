@@ -19,7 +19,8 @@ func scanBytes(src []byte, expected ...tokens.Token) int {
 		received = scanner.Next()
 		Ω(received).Should(Equal(token))
 	}
-	Ω(scanner.Next()).Should(Equal(tokens.EOF))
+	token := scanner.Next()
+	Ω(token).Should(Equal(tokens.EOF))
 	return scanner.Line()
 }
 
@@ -51,9 +52,6 @@ var _ = Describe("scanner", func() {
 		It("should parse multiple idents as IDENT", func() {
 			scanString("  ident   ident2 _ _12", tokens.Identifier, tokens.Identifier, tokens.Identifier, tokens.Identifier)
 		})
-		It("should parse basic operators correctly", func() {
-			scanString("+ - * /", tokens.Add, tokens.Sub, tokens.Mult, tokens.Div)
-		})
 		It("should report start/end correctly", func() {
 			scanString(" ident // comment", tokens.Identifier)
 		})
@@ -69,9 +67,6 @@ var _ = Describe("scanner", func() {
 			Expect(s.End()).To(Equal(token.Pos(2)))
 			Expect(s.Start()).To(Equal(c.Start()))
 			Expect(s.End()).To(Equal(c.End()))
-		})
-		It("can can a int range", func() {
-			scanString("1..2", tokens.LiteralInt, tokens.Range, tokens.LiteralInt)
 		})
 		It("can scan an integer qualifier", func() {
 			scanString("1i", tokens.LiteralInt)
@@ -101,6 +96,9 @@ var _ = Describe("scanner", func() {
 		})
 		It("can report an invalid escaped identifier", func() {
 			scanString(" `  \n", tokens.Invalid)
+		})
+		It("can scan a integer range", func() {
+			scanString("1..4", tokens.LiteralInt, tokens.Symbol, tokens.LiteralInt)
 		})
 	})
 })

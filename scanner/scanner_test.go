@@ -35,6 +35,29 @@ func TestInvalidBuffer(t *testing.T) {
 	}
 }
 
+func parsePseudoBytes(t *testing.T, src []byte, expectedToken tokens.Token, expected ...tokens.PseudoToken) (token.Pos, int, int) {
+	scanner := NewScanner(src, 0)
+	var received tokens.PseudoToken
+	for _, pseudoToken := range expected {
+		token := scanner.Next()
+		if token != expectedToken {
+			t.Errorf("Expected '%s', received '%s'", expectedToken.String(), token.String())
+		}
+		received = scanner.PseudoToken()
+		if pseudoToken != received {
+			t.Errorf("Expected '%s', received '%s'", pseudoToken.String(), received.String())
+		}
+	}
+	if scanner.Next() != tokens.EOF {
+		t.Error("Not enough tokens")
+	}
+	return scanner.Start(), scanner.Offset(), scanner.Line()
+}
+
+func parsePseudo(t *testing.T, text string, expectedToken tokens.Token, expected ...tokens.PseudoToken) (token.Pos, int, int) {
+	return parsePseudoBytes(t, append([]byte(text), 0), expectedToken, expected...)
+}
+
 func parseBytes(t *testing.T, src []byte, expected ...tokens.Token) (token.Pos, int, int) {
 	scanner := NewScanner(src, 0)
 	var received tokens.Token
@@ -77,44 +100,21 @@ func TestIdentifer(t *testing.T) {
 	parseString(t, "  ident   ident2 _ _12", tokens.Identifier, tokens.Identifier, tokens.Identifier, tokens.Identifier)
 }
 
-func TestOperators(t *testing.T) {
-	parseString(t, "+-*/%()[]{};:?!,.&&||>>==!=<=<->..:=|<||>...::",
-		tokens.Add, tokens.Sub, tokens.Mult, tokens.Div, tokens.Rem, tokens.LParen,
-		tokens.RParen, tokens.LBrack, tokens.RBrack, tokens.LBrace, tokens.RBrace,
-		tokens.Semi, tokens.Colon, tokens.Question, tokens.Not, tokens.Comma, tokens.Dot,
+func TestReservedSymbols(t *testing.T) {
+	parseString(t, "{}()[];: ,.::<||>",
+		tokens.LBrace, tokens.RBrace, tokens.LParen, tokens.RParen, tokens.LBrack, tokens.RBrack,
+		tokens.Semi, tokens.Colon, tokens.Comma, tokens.Dot, tokens.Scope, tokens.VocabularyStart,
+		tokens.VocabularyEnd,
+	)
+}
+
+func TestPseudoSymbols(t *testing.T) {
+	parsePseudo(t, "+ | - * / % ! && || > >= = == != < <= -> .. ...", tokens.Symbol,
+		tokens.Add, tokens.Bar, tokens.Sub, tokens.Mult, tokens.Div, tokens.Rem, tokens.Not,
 		tokens.LogicalAnd, tokens.LogicalOr, tokens.GreaterThan, tokens.GreaterThanEqual,
-		tokens.Equal, tokens.NotEqual, tokens.LessThanEqual, tokens.LessThan, tokens.Arrow,
-		tokens.Range, tokens.Assign, tokens.Bar, tokens.VocabularyStart, tokens.VocabularyEnd,
-		tokens.Spread, tokens.Scope)
-}
-
-func TestPlat(t *testing.T) {
-	text := "a !! b $ctor"
-	src := append([]byte(text), 0)
-	expect := func(scanner *Scanner, expected ...tokens.Token) {
-		var received tokens.Token
-		for _, token := range expected {
-			received = scanner.Next()
-			if token != received {
-				t.Errorf("Expected '%v', received '%v'", token, received)
-			}
-		}
-		received = scanner.Next()
-		if received != tokens.EOF {
-			t.Errorf("Not enough tokens %v %s", received, scanner.Value())
-		}
-
-	}
-	// Only expect a PLAT token when scanning an internal file
-	expect(NewScanner(src, InternalScan), tokens.Identifier, tokens.Platform,
-		tokens.Identifier, tokens.Identifier)
-	expect(NewScanner(src, 0), tokens.Identifier, tokens.Not, tokens.Not, tokens.Identifier,
-		tokens.Invalid, tokens.Identifier)
-}
-
-func TestBoolLiterals(t *testing.T) {
-	parseString(t, "true false truefalse falsetrue", tokens.True, tokens.False,
-		tokens.Identifier, tokens.Identifier)
+		tokens.Equal, tokens.DoubleEqual, tokens.NotEqual, tokens.LessThan, tokens.LessThanEqual,
+		tokens.Arrow, tokens.Range, tokens.Spread,
+	)
 }
 
 func testReservedWord(t *testing.T, tokenList ...tokens.Token) {
@@ -125,51 +125,40 @@ func testReservedWord(t *testing.T, tokenList ...tokens.Token) {
 	}
 }
 
-func parseBytesForPseudo(t *testing.T, src []byte, expected ...tokens.PseudoToken) (token.Pos, int, int) {
-	scanner := NewScanner(src, 0)
-	var received tokens.Token
-	for _, token := range expected {
-		received = scanner.Next()
-		if received != tokens.Identifier {
-			t.Errorf("Expected '%v', received '%v'", tokens.Identifier, received)
-		}
-		if scanner.PseudoToken() != token {
-			t.Errorf("Expected '%v', receive '%v'", token, scanner.PseudoToken())
-		}
+func testPseudo(t *testing.T, expectedToken tokens.Token, extender string, pseudoList ...tokens.PseudoToken) {
+	for _, pseudo := range pseudoList {
+		text := pseudo.String()
+		example := text + " " + text + " " + text + extender + " " + text
+		parsePseudo(t, example, expectedToken, pseudo, pseudo, tokens.InvalidPseudoToken, pseudo)
 	}
-	if scanner.Next() != tokens.EOF {
-		t.Error("Not enough tokens")
-	}
-	return scanner.Start(), scanner.Offset(), scanner.Line()
 }
 
-func parseStringForPseudo(t *testing.T, src string, expected ...tokens.PseudoToken) {
-	parseBytesForPseudo(t, append([]byte(src), 0), expected...)
+func testPseudoWord(t *testing.T, pseudoList ...tokens.PseudoToken) {
+	testPseudo(t, tokens.Identifier, "r", pseudoList...)
 }
 
-func testPseudoReservedWord(t *testing.T, tokenList ...tokens.PseudoToken) {
-	for _, token := range tokenList {
-		text := token.String()
-		example := text + " " + text + " " + text + "r " + text
-		parseStringForPseudo(t, example, token, token, tokens.InvalidPseudoToken, token)
-	}
+func testPseudoSymbol(t *testing.T, pseudoList ...tokens.PseudoToken) {
+	testPseudo(t, tokens.Symbol, "+", pseudoList...)
 }
 
 func TestReservedWords(t *testing.T) {
-	testReservedWord(t, tokens.As, tokens.Boolean, tokens.Break, tokens.Case, tokens.Continue,
-		tokens.Constraint, tokens.Default, tokens.Else, tokens.Enum, tokens.Float, tokens.For,
-		tokens.If, tokens.In, tokens.Int, tokens.Interface, tokens.Let, tokens.Match,
-		tokens.Method, tokens.Property, tokens.Record, tokens.Return, tokens.String, tokens.Switch,
-		tokens.True, tokens.Type, tokens.Var, tokens.Value, tokens.Void)
+	testReservedWord(t, tokens.False, tokens.Let, tokens.True, tokens.Return, tokens.Val, tokens.Var)
 }
 
-func TestPseudoReservedWords(t *testing.T) {
-	testPseudoReservedWord(t, tokens.After, tokens.Before, tokens.Infix, tokens.Left, tokens.Operator, tokens.Postfix, tokens.Prefix,
-		tokens.Right, tokens.Where)
+func TestPseudoReservedSymbols(t *testing.T) {
+	// Test pseudo symbols that obey extenders rule
+	testPseudoSymbol(t,
+		tokens.Add, tokens.Bar, tokens.Sub, tokens.Mult, tokens.Div, tokens.Rem, tokens.Not,
+		tokens.LogicalAnd, tokens.LogicalOr, tokens.GreaterThan, tokens.GreaterThanEqual,
+		tokens.Equal, tokens.DoubleEqual, tokens.NotEqual, tokens.LessThan, tokens.LessThanEqual,
+	)
 }
 
-func TestIllegalOperators(t *testing.T) {
-	parseString(t, "& ", tokens.Invalid)
+func TestPseudoWords(t *testing.T) {
+	testPseudoWord(t,
+		tokens.After, tokens.Before, tokens.Infix, tokens.Left, tokens.Operator, tokens.Postfix,
+		tokens.Prefix, tokens.Right, tokens.Where,
+	)
 }
 
 func TestLineCount(t *testing.T) {
@@ -306,10 +295,6 @@ func testRuneValue(t *testing.T, text string, r rune) {
 func TestRune(t *testing.T) {
 	testRuneValue(t, " 'a'  ", 'a')
 	testRuneValue(t, " '\n'  ", '\n')
-}
-
-func TestInvalidIdent(t *testing.T) {
-	rejectOne(t, "$ctor", "invalid identifier")
 }
 
 func TestInvalidFloat(t *testing.T) {

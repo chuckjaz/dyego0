@@ -214,24 +214,24 @@ var _ = Describe("ast", func() {
 			Expect(cn.Start()).To(Equal(token.Pos(0)))
 		})
 	})
-    Describe("String()'s", func() {
-        It("OperatorAssociativity", func() {
-            Expect(ast.Left.String()).To(Equal("left"))
-            Expect(ast.Right.String()).To(Equal("right"))
-            Expect(ast.OperatorAssociativity(-1).String()).To(Equal("invalid associativity"))
-        })
-        It("OperatorPrecedenceReleation", func() {
-            Expect(ast.Before.String()).To(Equal("before"))
-            Expect(ast.After.String()).To(Equal("after"))
-            Expect(ast.OperatorPrecedenceRelation(-1).String()).To(Equal("invalid relation"))
-        })
-        It("OperatorPlacement", func() {
-            Expect(ast.Infix.String()).To(Equal("infix"))
-            Expect(ast.Prefix.String()).To(Equal("prefix"))
-            Expect(ast.Postfix.String()).To(Equal("postfix"))
-            Expect(ast.OperatorPlacement(-1).String()).To(Equal("invalid placement"))
-        })
-    })
+	Describe("String()'s", func() {
+		It("OperatorAssociativity", func() {
+			Expect(ast.Left.String()).To(Equal("left"))
+			Expect(ast.Right.String()).To(Equal("right"))
+			Expect(ast.OperatorAssociativity(-1).String()).To(Equal("invalid associativity"))
+		})
+		It("OperatorPrecedenceReleation", func() {
+			Expect(ast.Before.String()).To(Equal("before"))
+			Expect(ast.After.String()).To(Equal("after"))
+			Expect(ast.OperatorPrecedenceRelation(-1).String()).To(Equal("invalid relation"))
+		})
+		It("OperatorPlacement", func() {
+			Expect(ast.Infix.String()).To(Equal("infix"))
+			Expect(ast.Prefix.String()).To(Equal("prefix"))
+			Expect(ast.Postfix.String()).To(Equal("postfix"))
+			Expect(ast.OperatorPlacement(-1).String()).To(Equal("invalid placement"))
+		})
+	})
 })
 
 type BuilderContext struct {

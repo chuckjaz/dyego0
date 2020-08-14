@@ -71,11 +71,6 @@ func (s *Scanner) Message() string {
 	return s.msg
 }
 
-// IsInternal reports if the scanning an internal file
-func (s *Scanner) IsInternal() bool {
-	return s.flags&InternalScan != 0
-}
-
 func identExtender(b byte) bool {
 	switch b {
 	case 'a', 'b', 'c', 'd', 'e',
@@ -91,6 +86,16 @@ func identExtender(b byte) bool {
 		'_', '$',
 		'0', '1', '2', '3', '4',
 		'5', '6', '7', '8', '9':
+		return true
+	}
+	return false
+}
+
+func symbolExtender(b byte) bool {
+	switch b {
+	case '~', '!', '@', '#', '$', '%', '^', '&',
+		'-', '_', '+', '=', ',', '/', '?', '|',
+		':':
 		return true
 	}
 	return false
@@ -135,148 +140,223 @@ loop:
 			line++
 			continue
 
-		case '+':
-			result = tokens.Add
-		case '-':
-			if src[offset] == '>' {
-				offset++
-				result = tokens.Arrow
-			} else {
-				result = tokens.Sub
-			}
-		case '*':
-			result = tokens.Mult
-		case '/':
-			if src[offset] == '/' {
-			commentLoop:
-				for {
-					b := src[offset]
+		case '+', '|', '-', '*', '/', '%', '!', '&', '>', '<',
+			'=', ':':
+			// Pseudo-symbols
+			switch b {
+			case '+':
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.Add
+					s.value = "+"
+					break loop
+				}
+			case '|':
+				switch src[offset] {
+				case '>':
 					offset++
-					switch b {
-					case '\n', '\r', 0:
-						offset--
-						break commentLoop
+					result = tokens.VocabularyEnd
+					break loop
+				case '|':
+					if !symbolExtender(src[offset+1]) {
+						offset++
+						result = tokens.Symbol
+						s.pseudo = tokens.LogicalOr
+						s.value = "||"
+						break loop
 					}
 				}
-				continue
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.Bar
+					s.value = "|"
+					break loop
+				}
+			case '-':
+				if src[offset] == '>' && !symbolExtender(src[offset+1]) {
+					offset++
+					result = tokens.Symbol
+					s.pseudo = tokens.Arrow
+					s.value = "->"
+					break loop
+				}
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.Sub
+					s.value = "-"
+					break loop
+				}
+			case '*':
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.Mult
+					s.value = "*"
+					break loop
+				}
+			case '/':
+				if src[offset] == '/' {
+				commentLoop:
+					for {
+						b := src[offset]
+						offset++
+						switch b {
+						case '\n', '\r', 0:
+							offset--
+							break commentLoop
+						}
+					}
+					continue loop
+				}
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.Div
+					s.value = "/"
+					break loop
+				}
+			case '%':
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.Rem
+					s.value = "%"
+					break loop
+				}
+			case '!':
+				if src[offset] == '=' && !symbolExtender(src[offset+1]) {
+					offset++
+					result = tokens.Symbol
+					s.pseudo = tokens.NotEqual
+					s.value = "!="
+					break loop
+				}
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.Not
+					s.value = "!"
+					break loop
+				}
+			case '&':
+				if src[offset] == '&' && !symbolExtender(src[offset+1]) {
+					offset++
+					result = tokens.Symbol
+					s.pseudo = tokens.LogicalAnd
+					s.value = "&&"
+					break loop
+				}
+			case '<':
+				switch src[offset] {
+				case '=':
+					if !symbolExtender(src[offset+1]) {
+						offset++
+						result = tokens.Symbol
+						s.pseudo = tokens.LessThanEqual
+						s.value = "<="
+						break loop
+					}
+				case '|':
+					offset++
+					result = tokens.VocabularyStart
+					break loop
+				}
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.LessThan
+					s.value = "<"
+					break loop
+				}
+			case '>':
+				if src[offset] == '=' && !symbolExtender(src[offset+1]) {
+					offset++
+					result = tokens.Symbol
+					s.pseudo = tokens.GreaterThanEqual
+					s.value = ">="
+					break loop
+				}
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.GreaterThan
+					s.value = ">"
+					break loop
+				}
+			case '=':
+				if src[offset] == '=' && !symbolExtender(src[offset+1]) {
+					offset++
+					result = tokens.Symbol
+					s.pseudo = tokens.DoubleEqual
+					s.value = "=="
+					break loop
+				}
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.Equal
+					s.value = "="
+					break loop
+				}
+			case ':':
+				if src[offset] == ':' && !symbolExtender(src[offset+1]) {
+					offset++
+					result = tokens.Scope
+					break loop
+				}
+				if !symbolExtender(src[offset]) {
+					result = tokens.Colon
+					break loop
+				}
 			}
-			result = tokens.Div
-		case '%':
-			result = tokens.Rem
-		case '(':
-			result = tokens.LParen
-		case ')':
-			result = tokens.RParen
-		case '[':
-			result = tokens.LBrack
-		case ']':
-			result = tokens.RBrack
+			fallthrough
+		case '~', '@', '#', '$', '^', '?':
+		symbolLoop:
+			for {
+				last := offset
+				b = src[offset]
+				offset++
+				switch b {
+				default:
+					offset = last
+					break symbolLoop
+				case '~', '!', '@', '#', '$', '%', '^', '&',
+					'-', '_', '+', '=', ',', '/', '?',
+					'|', ':':
+					continue
+				}
+			}
+			s.value = string(src[start:offset])
+			result = tokens.Symbol
+		case ',':
+			result = tokens.Comma
+		case ';':
+			result = tokens.Semi
 		case '{':
 			result = tokens.LBrace
 		case '}':
 			result = tokens.RBrace
-		case '!':
-			if src[offset] == '=' {
-				offset++
-				result = tokens.NotEqual
-			} else if src[offset] == '!' && s.IsInternal() {
-				offset++
-				result = tokens.Platform
-			} else {
-				result = tokens.Not
-			}
-		case ',':
-			result = tokens.Comma
-		case '=':
-			result = tokens.Equal
-		case ':':
-			switch src[offset] {
-			case '=':
-				offset++
-				result = tokens.Assign
-			case ':':
-				offset++
-				result = tokens.Scope
-			default:
-				result = tokens.Colon
-			}
-		case '?':
-			result = tokens.Question
-		case ';':
-			result = tokens.Semi
+		case '[':
+			result = tokens.LBrack
+		case ']':
+			result = tokens.RBrack
+		case '(':
+			result = tokens.LParen
+		case ')':
+			result = tokens.RParen
 		case '.':
 			if src[offset] == '.' {
 				if src[offset+1] == '.' {
 					offset += 2
-					result = tokens.Spread
+					result = tokens.Symbol
+					s.pseudo = tokens.Spread
 				} else {
 					offset++
-					result = tokens.Range
+					result = tokens.Symbol
+					s.pseudo = tokens.Range
 				}
 			} else {
 				result = tokens.Dot
 			}
 
-		case '&':
-			if src[offset] == '&' {
-				offset++
-				result = tokens.LogicalAnd
-			} else {
-				result = tokens.Invalid
-			}
-
-		case '|':
-			switch src[offset] {
-			case '|':
-				offset++
-				result = tokens.LogicalOr
-			case '>':
-				offset++
-				result = tokens.VocabularyEnd
-			default:
-				result = tokens.Bar
-			}
-
-		case '>':
-			if src[offset] == '=' {
-				offset++
-				result = tokens.GreaterThanEqual
-			} else {
-				result = tokens.GreaterThan
-			}
-
-		case '<':
-			switch src[offset] {
-			case '=':
-				offset++
-				result = tokens.LessThanEqual
-			case '|':
-				offset++
-				result = tokens.VocabularyStart
-			default:
-				result = tokens.LessThan
-			}
-
-		case '$':
-			if !s.IsInternal() {
-				result = tokens.Invalid
-				s.msg = "invalid identifier"
-				break loop
-			}
-			fallthrough
-
-		// Reserved and pseudo reserved words
-		case 'a', 'b', 'c', 'd', 'e', 'f', 'i', 'l', 'm', 'o', 'p', 'r', 's', 't', 'v', 'w':
+		// Pseudo reserved words and identifiers
+		case 'a', 'b', 'f', 'i', 'l', 'o', 'p', 't', 'r', 'v', 'w':
 			switch b {
 			case 'a':
 				switch src[offset] {
-				case 's':
-					// as
-					if !identExtender(src[offset+1]) {
-						offset++
-						result = tokens.As
-						break loop
-					}
 				case 'f':
 					// after
 					if src[offset+1] == 't' && src[offset+2] == 'e' && src[offset+3] == 'r' &&
@@ -284,6 +364,7 @@ loop:
 						offset += 4
 						result = tokens.Identifier
 						s.pseudo = tokens.After
+						s.value = "after"
 						break loop
 					}
 				}
@@ -296,119 +377,21 @@ loop:
 						offset += 5
 						result = tokens.Identifier
 						s.pseudo = tokens.Before
-						break loop
-					}
-				case 'o':
-					// boolean
-					if src[offset+1] == 'o' && src[offset+2] == 'l' &&
-						src[offset+3] == 'e' && src[offset+4] == 'a' &&
-						src[offset+5] == 'n' && !identExtender(src[offset+6]) {
-						offset += 6
-						result = tokens.Boolean
-						break loop
-					}
-				case 'r':
-					// break
-					if src[offset+1] == 'e' && src[offset+2] == 'a' &&
-						src[offset+3] == 'k' && !identExtender(src[offset+4]) {
-						offset += 4
-						result = tokens.Break
-						break loop
-					}
-				}
-			case 'c':
-				switch src[offset] {
-				case 'a':
-					// case
-					if src[offset+1] == 's' && src[offset+2] == 'e' && !identExtender(src[offset+3]) {
-						offset += 3
-						result = tokens.Case
-						break loop
-					}
-				case 'o':
-					if src[offset+1] == 'n' {
-						switch src[offset+2] {
-						case 's':
-							// constraint
-							if src[offset+3] == 't' && src[offset+4] == 'r' && src[offset+5] == 'a' &&
-								src[offset+6] == 'i' && src[offset+7] == 'n' && src[offset+8] == 't' &&
-								!identExtender(src[offset+9]) {
-								offset += 9
-								result = tokens.Constraint
-								break loop
-							}
-						case 't':
-							// continue
-							if src[offset+3] == 'i' && src[offset+4] == 'n' && src[offset+5] == 'u' &&
-								src[offset+6] == 'e' && !identExtender(src[offset+7]) {
-								offset += 7
-								result = tokens.Continue
-								break loop
-							}
-						}
-					}
-				}
-			case 'd':
-				// default
-				if src[offset] == 'e' && src[offset+1] == 'f' && src[offset+2] == 'a' &&
-					src[offset+3] == 'u' && src[offset+4] == 'l' && src[offset+5] == 't' &&
-					!identExtender(src[offset+6]) {
-					offset += 6
-					result = tokens.Default
-					break loop
-				}
-			case 'e':
-				switch src[offset] {
-				case 'l':
-					// else
-					if src[offset+1] == 's' && src[offset+2] == 'e' && !identExtender(src[offset+3]) {
-						offset += 3
-						result = tokens.Else
-						break loop
-					}
-				case 'n':
-					// enum
-					if src[offset+1] == 'u' && src[offset+2] == 'm' && !identExtender(src[offset+3]) {
-						offset += 3
-						result = tokens.Enum
+						s.value = "before"
 						break loop
 					}
 				}
 			case 'f':
-				switch src[offset] {
-				case 'a':
-					// false
-					if src[offset+1] == 'l' && src[offset+2] == 's' &&
-						src[offset+3] == 'e' && !identExtender(src[offset+4]) {
-						offset += 4
-						result = tokens.False
-						break loop
-					}
-				case 'l':
-					// float
-					if src[offset+1] == 'o' && src[offset+2] == 'a' &&
-						src[offset+3] == 't' && !identExtender(src[offset+4]) {
-						offset += 4
-						result = tokens.Float
-						break loop
-					}
-				case 'o':
-					// for
-					if src[offset+1] == 'r' && !identExtender(src[offset+2]) {
-						offset += 2
-						result = tokens.For
-						break loop
-					}
+				// false
+				if src[offset] == 'a' && src[offset+1] == 'l' && src[offset+2] == 's' && src[offset+3] == 'e' &&
+					!identExtender(src[offset+4]) {
+					offset += 4
+					result = tokens.False
+					s.value = "false"
+					break loop
 				}
 			case 'i':
 				switch src[offset] {
-				case 'f':
-					// if
-					if !identExtender(src[offset+1]) {
-						offset++
-						result = tokens.If
-						break loop
-					}
 				case 'n':
 					switch src[offset+1] {
 					case 'f':
@@ -417,29 +400,9 @@ loop:
 							offset += 4
 							result = tokens.Identifier
 							s.pseudo = tokens.Infix
+							s.value = "infix"
 							break loop
 						}
-					case 't':
-						// interface
-						if src[offset+2] == 'e' && src[offset+3] == 'r' && src[offset+4] == 'f' && src[offset+5] == 'a' &&
-							src[offset+6] == 'c' && src[offset+7] == 'e' && !identExtender(src[offset+8]) {
-							offset += 8
-							result = tokens.Interface
-							break loop
-						}
-
-						// int
-						if !identExtender(src[offset+2]) {
-							offset += 2
-							result = tokens.Int
-							break loop
-						}
-					}
-					// in
-					if !identExtender(src[offset+1]) {
-						offset++
-						result = tokens.In
-						break loop
 					}
 				}
 			case 'l':
@@ -452,6 +415,7 @@ loop:
 							offset += 3
 							result = tokens.Identifier
 							s.pseudo = tokens.Left
+							s.value = "left"
 							break loop
 						}
 					case 't':
@@ -463,25 +427,6 @@ loop:
 						}
 					}
 				}
-			case 'm':
-				switch src[offset] {
-				case 'a':
-					// match
-					if src[offset+1] == 't' && src[offset+2] == 'c' &&
-						src[offset+3] == 'h' && !identExtender(src[offset+4]) {
-						offset += 4
-						result = tokens.Match
-						break loop
-					}
-				case 'e':
-					// method
-					if src[offset+1] == 't' && src[offset+2] == 'h' &&
-						src[offset+3] == 'o' && src[offset+4] == 'd' && !identExtender(src[offset+5]) {
-						offset += 5
-						result = tokens.Method
-						break loop
-					}
-				}
 			case 'o':
 				// operator
 				if src[offset] == 'p' && src[offset+1] == 'e' && src[offset+2] == 'r' &&
@@ -490,6 +435,7 @@ loop:
 					offset += 7
 					result = tokens.Identifier
 					s.pseudo = tokens.Operator
+					s.value = "operator"
 					break loop
 				}
 			case 'p':
@@ -501,6 +447,7 @@ loop:
 						offset += 6
 						result = tokens.Identifier
 						s.pseudo = tokens.Postfix
+						s.value = "postfix"
 						break loop
 					}
 				case 'r':
@@ -512,30 +459,24 @@ loop:
 							offset += 5
 							result = tokens.Identifier
 							s.pseudo = tokens.Prefix
-							break loop
-						}
-					case 'o':
-						// property
-						if src[offset+2] == 'p' && src[offset+3] == 'e' && src[offset+4] == 'r' && src[offset+5] == 't' &&
-							src[offset+6] == 'y' && !identExtender(src[offset+7]) {
-							offset += 7
-							result = tokens.Property
+							s.value = "prefix"
 							break loop
 						}
 					}
+				}
+			case 't':
+				// true
+				if src[offset] == 'r' && src[offset+1] == 'u' && src[offset+2] == 'e' &&
+					!identExtender(src[offset+3]) {
+					offset += 3
+					result = tokens.True
+					s.value = "true"
+					break loop
 				}
 			case 'r':
 				switch src[offset] {
 				case 'e':
 					switch src[offset+1] {
-					case 'c':
-						// record
-						if src[offset+2] == 'o' && src[offset+3] == 'r' && src[offset+4] == 'd' &&
-							!identExtender(src[offset+5]) {
-							offset += 5
-							result = tokens.Record
-							break loop
-						}
 					case 't':
 						// return
 						if src[offset+2] == 'u' && src[offset+3] == 'r' && src[offset+4] == 'n' &&
@@ -552,42 +493,7 @@ loop:
 						offset += 4
 						result = tokens.Identifier
 						s.pseudo = tokens.Right
-						break loop
-					}
-				}
-			case 's':
-				switch src[offset] {
-				case 't':
-					// string
-					if src[offset+1] == 'r' && src[offset+2] == 'i' &&
-						src[offset+3] == 'n' && src[offset+4] == 'g' && !identExtender(src[offset+5]) {
-						offset += 5
-						result = tokens.String
-						break loop
-					}
-				case 'w':
-					// switch
-					if src[offset+1] == 'i' && src[offset+2] == 't' && src[offset+3] == 'c' &&
-						src[offset+4] == 'h' && !identExtender(src[offset+5]) {
-						offset += 5
-						result = tokens.Switch
-						break loop
-					}
-				}
-			case 't':
-				switch src[offset] {
-				case 'r':
-					// true
-					if src[offset+1] == 'u' && src[offset+2] == 'e' && !identExtender(src[offset+3]) {
-						offset += 3
-						result = tokens.True
-						break loop
-					}
-				case 'y':
-					// type
-					if src[offset+1] == 'p' && src[offset+2] == 'e' && !identExtender(src[offset+3]) {
-						offset += 3
-						result = tokens.Type
+						s.value = "right"
 						break loop
 					}
 				}
@@ -603,19 +509,12 @@ loop:
 							break loop
 						}
 					case 'l':
-						// value
-						if src[offset+2] == 'u' && src[offset+3] == 'e' && !identExtender(src[offset+4]) {
-							offset += 4
-							result = tokens.Value
+						// val
+						if !identExtender(src[offset+2]) {
+							offset += 2
+							result = tokens.Val
 							break loop
 						}
-					}
-				case 'o':
-					// void
-					if src[offset+1] == 'i' && src[offset+2] == 'd' && !identExtender(src[offset+3]) {
-						offset += 3
-						result = tokens.Void
-						break loop
 					}
 				}
 			case 'w':
@@ -625,15 +524,17 @@ loop:
 					offset += 4
 					result = tokens.Identifier
 					s.pseudo = tokens.Where
+					s.value = "where"
 					break loop
 				}
 			}
 			fallthrough
 
 			// Identifier
-		case 'g', 'h', 'j',
-			'k', 'n',
-			'q',
+		case 'c', 'd', 'e',
+			'g', 'h', 'j',
+			'k', 'm', 'n',
+			'q', 's',
 			'u', 'x', 'y', 'z',
 			'A', 'B', 'C', 'D', 'E',
 			'F', 'G', 'H', 'I', 'J',

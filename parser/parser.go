@@ -25,7 +25,7 @@ type parser struct {
 // NewParser creates a new parser
 func NewParser(scanner *scanner.Scanner) Parser {
 	builder := ast.NewBuilder(scanner)
-	p := &parser{scanner: scanner, builder: builder}
+	p := &parser{scanner: scanner, builder: builder, pseudo: tokens.InvalidPseudoToken}
 	builder.PushContext()
 	p.next()
 	return p
@@ -49,6 +49,8 @@ func (p *parser) expect(t tokens.Token) {
 	if p.current == t {
 		p.next()
 	} else {
+		p.builder.PushContext()
+		defer p.builder.PopContext()
 		p.report("Expected %v, recieved %v", t, p.current)
 		p.next()
 	}
@@ -58,10 +60,26 @@ func (p *parser) expectPseudo(t tokens.PseudoToken) {
 	if p.pseudo == t {
 		p.next()
 	} else {
+		p.builder.PushContext()
+		defer p.builder.PopContext()
 		if p.current == tokens.Identifier && p.pseudo != tokens.InvalidPseudoToken {
-			p.report("Expect %s, received %s", p.scanner.Value(), p.pseudo)
+			p.report("Expected %s, received %s", t.String(), p.pseudo.String())
 		} else {
-			p.report("Expected %s, received %v", t, p.current)
+			p.report("Expected %s, received %v", t.String(), p.current.String())
+		}
+	}
+}
+
+func (p *parser) expectPseudoSymbol(t tokens.PseudoToken) {
+	if p.pseudo == t {
+		p.next()
+	} else {
+		p.builder.PushContext()
+		defer p.builder.PopContext()
+		if p.current == tokens.Symbol && p.pseudo != tokens.InvalidPseudoToken {
+			p.report("Expected %s, received %s", t.String(), p.pseudo.String())
+		} else {
+			p.report("Expected %s, received %s", t.String(), p.current.String())
 		}
 	}
 }
@@ -103,9 +121,10 @@ func (p *parser) expectsPseudo(ts ...tokens.PseudoToken) ast.Element {
 func (p *parser) next() tokens.Token {
 	var next = p.scanner.Next()
 	p.current = next
-	if next == tokens.Identifier {
+	switch next {
+	case tokens.Identifier, tokens.Symbol:
 		p.pseudo = p.scanner.PseudoToken()
-	} else {
+	default:
 		p.pseudo = tokens.InvalidPseudoToken
 	}
 	return p.current
@@ -235,7 +254,7 @@ func (p *parser) namedArgument() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	name := p.expectIdent()
-	p.expect(tokens.Equal)
+	p.expectPseudoSymbol(tokens.Equal)
 	value := p.expression()
 	return p.builder.NamedArgument(name, value)
 }
@@ -260,11 +279,11 @@ func (p *parser) typeParametersClause() ast.TypeParameters {
 	state := p.preserve()
 	typeParameters := p.typeParameters()
 	whereClauses := p.whereClauses()
-	if p.current != tokens.Bar {
+	if p.pseudo != tokens.Bar {
 		p.restore(state)
 		return nil
 	}
-	p.expect(tokens.Bar)
+	p.expectPseudoSymbol(tokens.Bar)
 	return p.builder.TypeParameters(typeParameters, whereClauses)
 }
 
@@ -278,16 +297,18 @@ func (p *parser) typeParameters() []ast.TypeParameter {
 			result = append(result, typeParameter)
 			if p.current == tokens.Comma {
 				p.expect(tokens.Comma)
-				if p.current != tokens.Bar && p.pseudo != tokens.Where {
+				if p.pseudo != tokens.Bar && p.pseudo != tokens.Where {
 					continue
 				}
 			}
-		case tokens.Bar:
-			break
+		case tokens.Symbol:
+			if p.pseudo == tokens.Bar {
+				break
+			}
 		}
 		break
 	}
-	if p.current != tokens.Bar && p.pseudo != tokens.Where {
+	if p.pseudo != tokens.Bar && p.pseudo != tokens.Where {
 		p.restore(state)
 		return nil
 	}
@@ -312,7 +333,7 @@ func (p *parser) whereClause() ast.Where {
 	defer p.builder.PopContext()
 	p.expectPseudo(tokens.Where)
 	left := p.typeReference()
-	p.expect(tokens.Equal)
+	p.expectPseudoSymbol(tokens.Equal)
 	right := p.typeReference()
 	return p.builder.Where(left, right)
 }
@@ -332,11 +353,11 @@ func (p *parser) typeParameter() ast.TypeParameter {
 func (p *parser) lambdaParameters() []ast.Parameter {
 	state := p.preserve()
 	result := p.parameters()
-	if p.current != tokens.Arrow {
+	if p.pseudo != tokens.Arrow {
 		p.restore(state)
 		return nil
 	}
-	p.expect(tokens.Arrow)
+	p.expectPseudoSymbol(tokens.Arrow)
 	return result
 }
 
@@ -368,7 +389,7 @@ func (p *parser) parameter() ast.Parameter {
 		typeReference = p.typeReference()
 	}
 	var defaultExpression ast.Element
-	if p.current == tokens.Equal {
+	if p.pseudo == tokens.Equal {
 		p.next()
 		defaultExpression = p.expression()
 	}
@@ -451,7 +472,7 @@ func (p *parser) definition() ast.Element {
 	case tokens.Let:
 		p.next()
 		name := p.expectIdent()
-		p.expect(tokens.Equal)
+		p.expectPseudoSymbol(tokens.Equal)
 		value := p.letValue()
 		return p.builder.LetDefinition(name, value)
 	default:
@@ -466,7 +487,7 @@ func (p *parser) letValue() ast.Element {
 	case tokens.VocabularyStart:
 		return p.vocabularyLiteral()
 	default:
-		return p.expects(tokens.Spread, tokens.VocabularyStart)
+		return p.expects(tokens.VocabularyStart)
 	}
 }
 
@@ -493,8 +514,12 @@ func (p *parser) vocabularyMembers() []ast.Element {
 				p.expectsPseudo(tokens.Infix, tokens.Prefix, tokens.Postfix)
 				continue
 			}
-		case tokens.Spread:
-			result = append(result, p.vocabularyEmbedding())
+		case tokens.Symbol:
+			if p.pseudo == tokens.Spread {
+				result = append(result, p.vocabularyEmbedding())
+			} else {
+				break
+			}
 		case tokens.Comma:
 			p.next()
 			continue
@@ -599,7 +624,7 @@ func (p *parser) vocabularyPrecedenceQualifier() ast.VocabularyOperatorPrecedenc
 func (p *parser) vocabularyEmbedding() ast.VocabularyEmbedding {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
-	p.expect(tokens.Spread)
+	p.expectPseudoSymbol(tokens.Spread)
 	name := p.vocabularyNameReference()
 	return p.builder.VocabularyEmbedding(name)
 }
