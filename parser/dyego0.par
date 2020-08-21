@@ -2,6 +2,10 @@ compilation-unit:                   sequence
 
 sequence:                           sequencePart (COMMA sequencePart)* [COMMA]
 sequencePart:                       SPREAD (vocabularyReference | expression) |
+                                    loop-statement |
+                                    break-statement |
+                                    continue-statement |
+                                    return-statement |
                                     expression
 vocabularyReference:                NAME (SCOPE NAME)*
 
@@ -11,6 +15,7 @@ primitive:                          literal |
                                     initializer |
                                     lambda |
                                     definition |
+                                    when-expression |
                                     LPAREN expression RPAREN
 selector:                           DOT NAME
 call:                               LPAREN [arguments] RPAREN
@@ -18,6 +23,9 @@ arguments:                          argument (COMMA argument)* [COMMA]
 argument:                           NAME EQ expression |
                                     expression |
                                     SPLAT expression
+when-expression:                    WHEN LPAREN expression RPAREN LBRACK when-clause (COMMA when-clause)* [COMMA] RBRACK
+when-clause:                        expression ARROW LBRACK sequence RBRACK |
+                                    ELSE ARROW LBRACK sequence RBRACK
 literal:                            LIT_STRING | LIT_RUNE | LIT_INT | LIT_BYTE | LIT_UINT | LIT_LONG | LIT_ULONG |
                                     LIT_FLOAT | LIT_DOUBLE | TRUE | FALSE | NULL
 
@@ -86,3 +94,9 @@ local-definition:                   NAME [COLON type-reference] EQ expression
 destructor-definition:              LBRACK destructure-fields RBRACK
 destructor-fields:                  destructure-field (COMMA destructure-field)* [COMMA]
 destructor-field:                   [VAR|LET] NAME [as NAME] [COLON type-reference]
+
+loop-statement:                     LOOP [NAME] LBRACE sequence RBRACE
+break-statement:                    BREAK [NAME]
+continue-statement:                 CONTINUE [NAME]
+return-statement:                   RETURN expression
+

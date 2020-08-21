@@ -162,11 +162,23 @@ const (
 	// Before is the psuedo token "before"
 	Before
 
+	// Break is a pseudo token "break"
+	Break
+
+	// Continue is a pseudo token "continue"
+	Continue
+
+	// Else is a pseudo token "else"
+	Else
+
 	// Infix is the pseudo token "infix"
 	Infix
 
 	// Left is the pseudo token "left"
 	Left
+
+	// Loop is the pseudo token "loop"
+	Loop
 
 	// Operator it he pseudo token "opeartor"
 	Operator
@@ -179,6 +191,9 @@ const (
 
 	// Right is the pseudo token "right"
 	Right
+
+	// When is the pseudo token "when"
+	When
 
 	// Where is a pseudo token "where"
 	Where
@@ -249,12 +264,17 @@ const (
 var pseudoTokens = [...]string{
 	After:            "after",
 	Before:           "before",
+	Break:            "break",
+	Continue:         "continue",
+	Else:             "else",
 	Infix:            "infix",
 	Left:             "left",
+	Loop:             "loop",
 	Operator:         "operator",
 	Prefix:           "prefix",
 	Postfix:          "postfix",
 	Right:            "right",
+	When:             "when",
 	Where:            "where",
 	Add:              "+",
 	Bar:              "|",

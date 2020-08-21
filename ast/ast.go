@@ -102,17 +102,24 @@ type Selection interface {
 
 // Sequence is a sequence of expressions
 type Sequence interface {
-    Element
-    Left() Element
-    Right() Element
-    IsSequence() bool
+	Element
+	Left() Element
+	Right() Element
+	IsSequence() bool
 }
 
 // Spread is a spread expression prefix
 type Spread interface {
-    Element
-    Target() Element
-    IsSpread() bool
+	Element
+	Target() Element
+	IsSpread() bool
+}
+
+// Break is a break statement
+type Break interface {
+	Element
+	Label() Name
+	IsBreak() bool
 }
 
 // Call is a call expression
@@ -120,6 +127,13 @@ type Call interface {
 	Element
 	Target() Element
 	Arguments() []Element
+}
+
+// Continue is a continue statement
+type Continue interface {
+	Element
+	Label() Name
+	IsContinue() bool
 }
 
 // NamedArgument is a named argument to a call expression
@@ -174,6 +188,14 @@ type Lambda interface {
 	Body() Element
 }
 
+// Loop is a loop statement
+type Loop interface {
+	Element
+	Label() Name
+	Body() Element
+	IsLoop() bool
+}
+
 // Parameter is a function or lambda parameter declaration
 type Parameter interface {
 	Element
@@ -181,6 +203,13 @@ type Parameter interface {
 	Type() Element
 	Default() Element
 	IsParameter() bool
+}
+
+// Return is a return statement
+type Return interface {
+	Element
+	Value() Element
+	IsReturn() bool
 }
 
 // TypeParameters is a type paramters clause
@@ -196,6 +225,28 @@ type TypeParameter interface {
 	Name() Name
 	Constraint() Element
 	IsTypeParameter() bool
+}
+
+// When is a when expression
+type When interface {
+	Element
+	Target() Element
+	Clauses() []Element
+}
+
+// WhenValueClause is a value clause of a when expression
+type WhenValueClause interface {
+	Element
+	Value() Element
+	Body() Element
+	IsWhenValueClause() bool
+}
+
+// WhenElseClause is an else clause of a when expression
+type WhenElseClause interface {
+	Element
+	Body() Element
+	IsElse() bool
 }
 
 // Where is a type parameter where clause
@@ -354,9 +405,11 @@ type Builder interface {
 	LiteralBoolean(value bool) LiteralBoolean
 	LiteralString(value string) LiteralString
 	LiteralNull() LiteralNull
-    Sequence(left, right Element) Sequence
+	Break(label Name) Break
+	Continue(label Name) Continue
+	Sequence(left, right Element) Sequence
 	Selection(target Element, member Name) Selection
-    Spread(target Element) Spread
+	Spread(target Element) Spread
 	Call(target Element, arguments []Element) Call
 	NamedArgument(name Name, value Element) NamedArgument
 	ObjectInitializer(mutable bool, members []MemberInitializer) ObjectInitializer
@@ -364,8 +417,13 @@ type Builder interface {
 	NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer
 	SplatMemberInitializer(typ Element) SplatMemberInitializer
 	Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda
+	Loop(label Name, body Element) Loop
+	Return(value Element) Return
 	TypeParameters(parameters []TypeParameter, wheres []Where) TypeParameters
 	TypeParameter(name Name, constraint Element) TypeParameter
+	When(target Element, clauses []Element) When
+	WhenValueClause(value Element, body Element) WhenValueClause
+	WhenElseClause(body Element) WhenElseClause
 	Where(left, right Element) Where
 	Parameter(name Name, typ Element, deflt Element) Parameter
 	VarDefinition(name Name, typ Element, mutable bool) VarDefinition
@@ -384,7 +442,7 @@ type Builder interface {
 	) VocabularyOperatorPrecedence
 	VocabularyEmbedding(name []Name) VocabularyEmbedding
 	Error(message string) Error
-    DirectError(start, end token.Pos, message string) Error
+	DirectError(start, end token.Pos, message string) Error
 	Clone(context BuilderContext) Builder
 }
 
@@ -576,6 +634,40 @@ func (b *builderImpl) LiteralNull() LiteralNull {
 	return &literalNullImpl{Location: b.Loc()}
 }
 
+type breakImpl struct {
+	Location
+	label Name
+}
+
+func (b *breakImpl) Label() Name {
+	return b.label
+}
+
+func (b *breakImpl) IsBreak() bool {
+	return true
+}
+
+func (b *builderImpl) Break(label Name) Break {
+	return &breakImpl{Location: b.Loc(), label: label}
+}
+
+type continueImpl struct {
+	Location
+	label Name
+}
+
+func (b *continueImpl) Label() Name {
+	return b.label
+}
+
+func (b *continueImpl) IsContinue() bool {
+	return true
+}
+
+func (b *builderImpl) Continue(label Name) Continue {
+	return &continueImpl{Location: b.Loc(), label: label}
+}
+
 type selectionImpl struct {
 	Location
 	target Element
@@ -595,42 +687,42 @@ func (b *builderImpl) Selection(target Element, member Name) Selection {
 }
 
 type sequenceImpl struct {
-    Location
-    left Element
-    right Element
+	Location
+	left  Element
+	right Element
 }
 
 func (s *sequenceImpl) Left() Element {
-    return s.left
+	return s.left
 }
 
 func (s *sequenceImpl) Right() Element {
-    return s.right
+	return s.right
 }
 
 func (s *sequenceImpl) IsSequence() bool {
-    return true
+	return true
 }
 
-func (b *builderImpl) Sequence(left, right Element) Sequence{
-    return &sequenceImpl{Location: b.Loc(), left: left, right: right}
+func (b *builderImpl) Sequence(left, right Element) Sequence {
+	return &sequenceImpl{Location: b.Loc(), left: left, right: right}
 }
 
 type spreadImpl struct {
-    Location
-    target Element
+	Location
+	target Element
 }
 
 func (s *spreadImpl) Target() Element {
-    return s.target
+	return s.target
 }
 
 func (s *spreadImpl) IsSpread() bool {
-    return true
+	return true
 }
 
 func (b *builderImpl) Spread(target Element) Spread {
-    return &spreadImpl{Location: b.Loc(), target: target}
+	return &spreadImpl{Location: b.Loc(), target: target}
 }
 
 type callImpl struct {
@@ -780,6 +872,28 @@ func (b *builderImpl) Lambda(typeParameters TypeParameters, parameters []Paramet
 	return &lambdaImpl{Location: b.Loc(), typeParameters: typeParameters, parameters: parameters, body: body}
 }
 
+type loopImpl struct {
+	Location
+	label Name
+	body  Element
+}
+
+func (l *loopImpl) Label() Name {
+	return l.label
+}
+
+func (l *loopImpl) Body() Element {
+	return l.body
+}
+
+func (l *loopImpl) IsLoop() bool {
+	return true
+}
+
+func (b *builderImpl) Loop(label Name, body Element) Loop {
+	return &loopImpl{Location: b.Loc(), label: label, body: body}
+}
+
 type parameterImpl struct {
 	Location
 	name  Name
@@ -805,6 +919,23 @@ func (p *parameterImpl) IsParameter() bool {
 
 func (b *builderImpl) Parameter(name Name, typ Element, deflt Element) Parameter {
 	return &parameterImpl{Location: b.Loc(), name: name, typ: typ, deflt: deflt}
+}
+
+type returnImpl struct {
+	Location
+	value Element
+}
+
+func (r *returnImpl) Value() Element {
+	return r.value
+}
+
+func (r *returnImpl) IsReturn() bool {
+	return true
+}
+
+func (b *builderImpl) Return(value Element) Return {
+	return &returnImpl{Location: b.Loc(), value: value}
 }
 
 type typeParametersImpl struct {
@@ -845,6 +976,63 @@ func (t *typeParameterImpl) IsTypeParameter() bool {
 
 func (b *builderImpl) TypeParameter(name Name, constraint Element) TypeParameter {
 	return &typeParameterImpl{Location: b.Loc(), name: name, constraint: constraint}
+}
+
+type whenImpl struct {
+	Location
+	target  Element
+	clauses []Element
+}
+
+func (w *whenImpl) Target() Element {
+	return w.target
+}
+
+func (w *whenImpl) Clauses() []Element {
+	return w.clauses
+}
+
+func (b *builderImpl) When(target Element, clauses []Element) When {
+	return &whenImpl{Location: b.Loc(), target: target, clauses: clauses}
+}
+
+type whenElseClauseImpl struct {
+	Location
+	body Element
+}
+
+func (w *whenElseClauseImpl) Body() Element {
+	return w.body
+}
+
+func (w *whenElseClauseImpl) IsElse() bool {
+	return true
+}
+
+func (b *builderImpl) WhenElseClause(body Element) WhenElseClause {
+	return &whenElseClauseImpl{Location: b.Loc(), body: body}
+}
+
+type whenValueClauseImpl struct {
+	Location
+	value Element
+	body  Element
+}
+
+func (w *whenValueClauseImpl) Value() Element {
+	return w.value
+}
+
+func (w *whenValueClauseImpl) Body() Element {
+	return w.body
+}
+
+func (w *whenValueClauseImpl) IsWhenValueClause() bool {
+	return true
+}
+
+func (b *builderImpl) WhenValueClause(value Element, body Element) WhenValueClause {
+	return &whenValueClauseImpl{Location: b.Loc(), value: value, body: body}
 }
 
 type whereImpl struct {
@@ -1037,7 +1225,7 @@ func (b *builderImpl) Error(message string) Error {
 }
 
 func (b *builderImpl) DirectError(start, end token.Pos, message string) Error {
-    return &errorImpl{Location: NewLocation(start, end), message: message}
+	return &errorImpl{Location: NewLocation(start, end), message: message}
 }
 
 func (b *builderImpl) Clone(context BuilderContext) Builder {

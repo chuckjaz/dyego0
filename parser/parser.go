@@ -86,24 +86,10 @@ func (p *parser) expectPseudo(t tokens.PseudoToken) {
 	} else {
 		p.builder.PushContext()
 		defer p.builder.PopContext()
-		if p.current == tokens.Identifier && p.pseudo != tokens.InvalidPseudoToken {
+		if (p.current == tokens.Identifier || p.current == tokens.Symbol) && p.pseudo != tokens.InvalidPseudoToken {
 			p.report("Expected %s, received %s", t.String(), p.pseudo.String())
 		} else {
 			p.report("Expected %s, received %v", t.String(), p.current.String())
-		}
-	}
-}
-
-func (p *parser) expectPseudoSymbol(t tokens.PseudoToken) {
-	if p.pseudo == t {
-		p.next()
-	} else {
-		p.builder.PushContext()
-		defer p.builder.PopContext()
-		if p.current == tokens.Symbol && p.pseudo != tokens.InvalidPseudoToken {
-			p.report("Expected %s, received %s", t.String(), p.pseudo.String())
-		} else {
-			p.report("Expected %s, received %s", t.String(), p.current.String())
 		}
 	}
 }
@@ -196,14 +182,29 @@ func (p *parser) sequence() ast.Element {
 
 	var left ast.Element
 	switch p.current {
-	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
-		tokens.LParen, tokens.Symbol, tokens.Let:
+	case tokens.Identifier:
+		switch p.pseudo {
+		case tokens.Break:
+			left = p.breakStatement()
+		case tokens.Continue:
+			left = p.continueStatement()
+		case tokens.Loop:
+			left = p.loopStatement()
+		default:
+			left = p.expression()
+		}
+	case tokens.Symbol:
 		if p.pseudo == tokens.Spread {
 			left = p.spreadExpression()
 		} else {
 			left = p.expression()
 		}
+	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
+		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.LBrace,
+		tokens.LParen, tokens.Let:
+		left = p.expression()
+	case tokens.Return:
+		left = p.returnStatement()
 	default:
 		left = p.expects(primitiveTokens...)
 	}
@@ -394,9 +395,85 @@ func (p *parser) namedArgument() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	name := p.expectIdent()
-	p.expectPseudoSymbol(tokens.Equal)
+	p.expectPseudo(tokens.Equal)
 	value := p.expression()
 	return p.builder.NamedArgument(name, value)
+}
+
+func (p *parser) whenExpression() ast.When {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expectPseudo(tokens.When)
+	p.expect(tokens.LParen)
+	target := p.expression()
+	p.expect(tokens.RParen)
+	p.expect(tokens.LBrace)
+	clauses := p.whenClauses()
+	p.expect(tokens.RBrace)
+	p.builder.PushContext()
+	return p.builder.When(target, clauses)
+}
+
+func (p *parser) whenClauses() []ast.Element {
+	var result []ast.Element
+	for {
+		switch p.current {
+		case tokens.Identifier:
+			if p.pseudo == tokens.Else {
+				result = append(result, p.whenElseClause())
+				if p.current == tokens.Comma {
+					p.next()
+					continue
+				} else {
+					break
+				}
+			}
+			fallthrough
+		case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
+			tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
+			tokens.LBrace, tokens.LParen, tokens.Symbol:
+			result = append(result, p.whenValueClause())
+			if p.current == tokens.Comma {
+				p.next()
+				continue
+			}
+		}
+		if p.current == tokens.Comma {
+			switch p.current {
+			case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
+				tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
+				tokens.LBrace, tokens.LParen, tokens.Symbol:
+				continue
+			}
+		}
+		break
+	}
+	if p.current == tokens.Comma {
+		p.next()
+	}
+	return result
+}
+
+func (p *parser) whenElseClause() ast.WhenElseClause {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expectPseudo(tokens.Else)
+	p.expectPseudo(tokens.Arrow)
+	p.expect(tokens.LBrace)
+	body := p.sequence()
+	p.expect(tokens.RBrace)
+	return p.builder.WhenElseClause(body)
+}
+
+func (p *parser) whenValueClause() ast.WhenValueClause {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	value := p.expression()
+	p.expectPseudo(tokens.Arrow)
+	p.expect(tokens.LBrace)
+	body := p.sequence()
+	p.expect(tokens.RBrace)
+	return p.builder.WhenValueClause(value, body)
 }
 
 func (p *parser) lambda() ast.Element {
@@ -423,7 +500,7 @@ func (p *parser) typeParametersClause() ast.TypeParameters {
 		p.restore(state)
 		return nil
 	}
-	p.expectPseudoSymbol(tokens.Bar)
+	p.expectPseudo(tokens.Bar)
 	return p.builder.TypeParameters(typeParameters, whereClauses)
 }
 
@@ -473,7 +550,7 @@ func (p *parser) whereClause() ast.Where {
 	defer p.builder.PopContext()
 	p.expectPseudo(tokens.Where)
 	left := p.typeReference()
-	p.expectPseudoSymbol(tokens.Equal)
+	p.expectPseudo(tokens.Equal)
 	right := p.typeReference()
 	return p.builder.Where(left, right)
 }
@@ -497,7 +574,7 @@ func (p *parser) lambdaParameters() []ast.Parameter {
 		p.restore(state)
 		return nil
 	}
-	p.expectPseudoSymbol(tokens.Arrow)
+	p.expectPseudo(tokens.Arrow)
 	return result
 }
 
@@ -585,6 +662,10 @@ func (p *parser) primitive() ast.Element {
 		p.next()
 		return result
 	case tokens.Identifier:
+		switch p.pseudo {
+		case tokens.When:
+			return p.whenExpression()
+		}
 		result := p.builder.Name(p.scanner.Value().(string))
 		p.next()
 		return result
@@ -605,7 +686,7 @@ func (p *parser) primitive() ast.Element {
 func (p *parser) spreadExpression() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
-	p.expectPseudoSymbol(tokens.Spread)
+	p.expectPseudo(tokens.Spread)
 	preserved := p.preserve()
 	reference := p.spreadReference()
 	if len(p.errors) > len(preserved.errors) {
@@ -651,7 +732,7 @@ func (p *parser) definition() ast.Element {
 	case tokens.Let:
 		p.next()
 		name := p.expectIdent()
-		p.expectPseudoSymbol(tokens.Equal)
+		p.expectPseudo(tokens.Equal)
 		value := p.letValue()
 		return p.builder.LetDefinition(name, value)
 	default:
@@ -803,7 +884,7 @@ func (p *parser) vocabularyPrecedenceQualifier() ast.VocabularyOperatorPrecedenc
 func (p *parser) vocabularyEmbedding() ast.VocabularyEmbedding {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
-	p.expectPseudoSymbol(tokens.Spread)
+	p.expectPseudo(tokens.Spread)
 	name := p.vocabularyNameReference()
 	return p.builder.VocabularyEmbedding(name)
 }
@@ -857,4 +938,54 @@ func lookup(scope vocabularyScope, element ast.Element) (any, ast.Element) {
 		assert.Fail("selectorsToNames called with invalid node %#v", element)
 	}
 	return nil, element
+}
+
+func (p *parser) loopStatement() ast.Loop {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	var label ast.Name
+	p.expectPseudo(tokens.Loop)
+	if p.current == tokens.Identifier {
+		label = p.expectIdent()
+	}
+	p.expect(tokens.LBrace)
+	body := p.sequence()
+	p.expect(tokens.RBrace)
+	return p.builder.Loop(label, body)
+}
+
+func (p *parser) breakStatement() ast.Break {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expectPseudo(tokens.Break)
+	var label ast.Name
+	if p.current == tokens.Identifier {
+		label = p.expectIdent()
+	}
+	return p.builder.Break(label)
+}
+
+func (p *parser) continueStatement() ast.Continue {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expectPseudo(tokens.Continue)
+	var label ast.Name
+	if p.current == tokens.Identifier {
+		label = p.expectIdent()
+	}
+	return p.builder.Continue(label)
+}
+
+func (p *parser) returnStatement() ast.Return {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expect(tokens.Return)
+	var value ast.Element
+	switch p.current {
+	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
+		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
+		tokens.LBrace, tokens.LParen, tokens.Symbol:
+		value = p.expression()
+	}
+	return p.builder.Return(value)
 }

@@ -62,22 +62,32 @@ var _ = Describe("ast", func() {
 			l := b.LiteralNull()
 			Expect(l.IsNull()).To(Equal(true))
 		})
+		It("Break", func() {
+			n := b.Break(nil)
+			Expect(n.Label()).To(BeNil())
+			Expect(n.IsBreak()).To(BeTrue())
+		})
+		It("Continue", func() {
+			n := b.Continue(nil)
+			Expect(n.Label()).To(BeNil())
+			Expect(n.IsContinue()).To(BeTrue())
+		})
 		It("Selection", func() {
 			l := b.Selection(nil, nil)
 			Expect(l.Target()).To(BeNil())
 			Expect(l.Member()).To(BeNil())
 		})
-        It("Sequence", func() {
-            s := b.Sequence(nil, nil)
-            Expect(s.Left()).To(BeNil())
-            Expect(s.Right()).To(BeNil())
-            Expect(s.IsSequence()).To(Equal(true))
-        })
-        It("Spread", func() {
-            s := b.Spread(nil)
-            Expect(s.Target()).To(BeNil())
-            Expect(s.IsSpread()).To(Equal(true))
-        })
+		It("Sequence", func() {
+			s := b.Sequence(nil, nil)
+			Expect(s.Left()).To(BeNil())
+			Expect(s.Right()).To(BeNil())
+			Expect(s.IsSequence()).To(Equal(true))
+		})
+		It("Spread", func() {
+			s := b.Spread(nil)
+			Expect(s.Target()).To(BeNil())
+			Expect(s.IsSpread()).To(Equal(true))
+		})
 		It("Call", func() {
 			l := b.Call(nil, nil)
 			Expect(l.Target()).To(BeNil())
@@ -118,12 +128,23 @@ var _ = Describe("ast", func() {
 			Expect(l.Parameters()).To(BeNil())
 			Expect(l.Body()).To(BeNil())
 		})
+		It("Loop", func() {
+			l := b.Loop(nil, nil)
+			Expect(l.Label()).To(BeNil())
+			Expect(l.Body()).To(BeNil())
+			Expect(l.IsLoop()).To(BeTrue())
+		})
 		It("Parameter", func() {
 			l := b.Parameter(b.Name("name"), nil, nil)
 			Expect(l.Name().Text()).To(Equal("name"))
 			Expect(l.Type()).To(BeNil())
 			Expect(l.Default()).To(BeNil())
 			Expect(l.IsParameter()).To(Equal(true))
+		})
+		It("Return", func() {
+			n := b.Return(nil)
+			Expect(n.Value()).To(BeNil())
+			Expect(n.IsReturn()).To(BeTrue())
 		})
 		It("TypeParameters", func() {
 			l := b.TypeParameters(nil, nil)
@@ -135,6 +156,22 @@ var _ = Describe("ast", func() {
 			Expect(l.Name()).To(BeNil())
 			Expect(l.Constraint()).To(BeNil())
 			Expect(l.IsTypeParameter()).To(Equal(true))
+		})
+		It("When", func() {
+			n := b.When(nil, nil)
+			Expect(n.Target()).To(BeNil())
+			Expect(n.Clauses()).To(BeNil())
+		})
+		It("WhenElseClause", func() {
+			n := b.WhenElseClause(nil)
+			Expect(n.Body()).To(BeNil())
+			Expect(n.IsElse()).To(BeTrue())
+		})
+		It("WhenValueClause", func() {
+			n := b.WhenValueClause(nil, nil)
+			Expect(n.Value()).To(BeNil())
+			Expect(n.Body()).To(BeNil())
+			Expect(n.IsWhenValueClause()).To(BeTrue())
 		})
 		It("Where", func() {
 			l := b.Where(nil, nil)
@@ -182,12 +219,12 @@ var _ = Describe("ast", func() {
 			l := b.Error("message")
 			Expect(l.Message()).To(Equal("message"))
 		})
-        It("DirectError", func() {
-            l := b.DirectError(token.Pos(1), token.Pos(2), "message")
-            Expect(l.Message()).To(Equal("message"))
-            Expect(l.Start()).To(Equal(token.Pos(1)))
-            Expect(l.End()).To(Equal(token.Pos(2)))
-        })
+		It("DirectError", func() {
+			l := b.DirectError(token.Pos(1), token.Pos(2), "message")
+			Expect(l.Message()).To(Equal("message"))
+			Expect(l.Start()).To(Equal(token.Pos(1)))
+			Expect(l.End()).To(Equal(token.Pos(2)))
+		})
 	})
 	Describe("location", func() {
 		It("can push a context", func() {
