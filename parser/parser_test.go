@@ -120,16 +120,6 @@ var _ = Describe("parser", func() {
 			Expect(ok).To(Equal(true))
 			return l
 		}
-		expectNumber := func(element ast.Element, value int) {
-			n, ok := element.(ast.LiteralInt)
-			Expect(ok).To(Equal(true))
-			Expect(n.Value()).To(Equal(value))
-		}
-		expectName := func(element ast.Element, value string) {
-			l, ok := element.(ast.Name)
-			Expect(ok).To(Equal(true))
-			Expect(l.Text()).To(Equal(value))
-		}
 		expectNil := func(element interface{}) {
 			Expect(element).To(BeNil())
 		}
@@ -251,6 +241,61 @@ var _ = Describe("parser", func() {
 			l := lambda("{ A, B where A = Int where B = A | a: A -> a }")
 			expectName(l.Body(), "a")
 			expectWheres(l.TypeParameters(), w("A", "Int"), w("B", "A"))
+		})
+	})
+	Describe("statements", func() {
+		It("can parser a loop", func() {
+			_, ok := parse("loop { 1 }").(ast.Loop)
+			Expect(ok).To(BeTrue())
+		})
+		It("can parse a labeled loop", func() {
+			l, ok := parse("loop loop { 1 }").(ast.Loop)
+			Expect(ok).To(BeTrue())
+			expectName(l.Label(), "loop")
+		})
+		It("can parse break", func() {
+			_, ok := parse("break").(ast.Break)
+			Expect(ok).To(BeTrue())
+		})
+		It("can parse labeled break", func() {
+			b, ok := parse("break loop").(ast.Break)
+			Expect(ok).To(BeTrue())
+			expectName(b.Label(), "loop")
+		})
+		It("can parse continue", func() {
+			_, ok := parse("continue").(ast.Continue)
+			Expect(ok).To(BeTrue())
+		})
+		It("can parse labeled continue", func() {
+			c, ok := parse("continue loop").(ast.Continue)
+			Expect(ok).To(BeTrue())
+			expectName(c.Label(), "loop")
+		})
+		It("can parse a return statement", func() {
+			_, ok := parse("return").(ast.Return)
+			Expect(ok).To(BeTrue())
+		})
+		It("can parse a return statement with a value", func() {
+			r, ok := parse("return 42").(ast.Return)
+			Expect(ok).To(BeTrue())
+			expectNumber(r.Value(), 42)
+		})
+		It("can parse a when expression", func() {
+			w, ok := parse("when (1) { 2 -> { 3 }, 4 -> { 5 }, else -> { 6 } }").(ast.When)
+			Expect(ok).To(BeTrue())
+			expectNumber(w.Target(), 1)
+			Expect(len(w.Clauses())).To(Equal(3))
+			wv, ok := w.Clauses()[0].(ast.WhenValueClause)
+			Expect(ok).To(BeTrue())
+			expectNumber(wv.Value(), 2)
+			expectNumber(wv.Body(), 3)
+			wv, ok = w.Clauses()[1].(ast.WhenValueClause)
+			Expect(ok).To(BeTrue())
+			expectNumber(wv.Value(), 4)
+			expectNumber(wv.Body(), 5)
+			we, ok := w.Clauses()[2].(ast.WhenElseClause)
+			Expect(ok).To(BeTrue())
+			expectNumber(we.Body(), 6)
 		})
 	})
 	Describe("vocabulary", func() {
@@ -450,6 +495,9 @@ func lineLenOf(lineMap []int, line int) int {
 	if lineMap == nil {
 		return 0
 	}
+	if line >= len(lineMap) {
+		return lineMap[len(lineMap)-1]
+	}
 	return lineMap[line] - lineMap[line-1]
 }
 
@@ -466,7 +514,9 @@ func printErrors(errors []ast.Error, source string) {
 				errorLen = lineLength - col
 			}
 			println(err.Message())
-			println(source[lineMap[line-1]:lineMap[line]])
+			if line < len(lineMap) {
+				println(source[lineMap[line-1]:lineMap[line]])
+			}
 			println(fmt.Sprintf("%s%s", strings.Repeat(" ", col-1), strings.Repeat("^", errorLen)))
 		}
 	}
@@ -493,6 +543,18 @@ func parse(text string) ast.Element {
 	printErrors(p.Errors(), text)
 	Expect(p.Errors()).To(BeNil())
 	return r
+}
+
+func expectNumber(element ast.Element, value int) {
+	n, ok := element.(ast.LiteralInt)
+	Expect(ok).To(Equal(true))
+	Expect(n.Value()).To(Equal(value))
+}
+
+func expectName(element ast.Element, value string) {
+	l, ok := element.(ast.Name)
+	Expect(ok).To(Equal(true))
+	Expect(l.Text()).To(Equal(value))
 }
 
 func TestErrors(t *testing.T) {

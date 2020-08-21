@@ -156,8 +156,8 @@ func TestPseudoReservedSymbols(t *testing.T) {
 
 func TestPseudoWords(t *testing.T) {
 	testPseudoWord(t,
-		tokens.After, tokens.Before, tokens.Infix, tokens.Left, tokens.Operator, tokens.Postfix,
-		tokens.Prefix, tokens.Right, tokens.Where,
+		tokens.After, tokens.Before, tokens.Break, tokens.Continue, tokens.Else, tokens.Infix, tokens.Left, tokens.Loop,
+		tokens.Operator, tokens.Postfix, tokens.Prefix, tokens.Right, tokens.When, tokens.Where,
 	)
 }
 
