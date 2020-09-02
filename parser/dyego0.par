@@ -43,8 +43,10 @@ vocabulary-members:                 vocabulary-member (COMMA vocabulary-member)*
 vocabulary-member:                  vocabulary-operator-declaration |
                                     vocabulary-callable-declaration |
                                     vocabular-embedding
-vocabulary-operator-declaration:    (INFIX | PREFIX | POSTFIX) OPERATOR vocabulary-names [vocabular-precedece-qualifier] [LEFT | RIGHT]
+vocabulary-operator-declaration:    (INFIX | PREFIX | POSTFIX) OPERATOR vocabulary-names
+                                        [vocabular-precedece-qualifier] [LEFT | RIGHT]
 vocabular-names:                    NAME |
+                                    IDENTIFIERS |
                                     LPAREN identifier-list RPAREN
 vocabulary-precedece-qualifier:     (BEFORE | AFTER) [INFIX | PREFIX | POSTFIX] NAME
 

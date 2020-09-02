@@ -18,6 +18,7 @@ type Scanner struct {
 	line   int
 	start  int
 	end    int
+	nlloc  int
 	msg    string
 	flags  int
 	pseudo tokens.PseudoToken
@@ -37,8 +38,8 @@ func NewScanner(src []byte, flags int) *Scanner {
 // for backtracking, if necessary by using the returned instance instead of the
 // instance that was moved forward.
 func (s *Scanner) Clone() *Scanner {
-	return &Scanner{src: s.src, offset: s.offset, line: s.line, start: s.start,
-		end: s.end, msg: s.msg, flags: s.flags, pseudo: s.pseudo, value: s.value}
+	return &Scanner{src: s.src, offset: s.offset, line: s.line, start: s.start, end: s.end, nlloc: s.nlloc,
+		msg: s.msg, flags: s.flags, pseudo: s.pseudo, value: s.value}
 }
 
 // Line is the current line of the scanner
@@ -54,6 +55,11 @@ func (s *Scanner) Start() token.Pos {
 // End is the end of the current token
 func (s *Scanner) End() token.Pos {
 	return token.Pos(s.end)
+}
+
+// NewLineLocation is the location of a new line prior to the current token
+func (s *Scanner) NewLineLocation() token.Pos {
+	return token.Pos(s.nlloc)
 }
 
 // Offset is the current location of the scanner
@@ -116,6 +122,7 @@ func (s *Scanner) Next() tokens.Token {
 	result := tokens.Invalid
 	s.pseudo = tokens.InvalidPseudoToken
 	s.value = nil
+	s.nlloc = 0
 loop:
 	for {
 		b := src[offset]
@@ -138,10 +145,11 @@ loop:
 			fallthrough
 		case '\n':
 			line++
+			s.nlloc = offset - 1
 			continue
 
 		case '+', '|', '-', '*', '/', '%', '!', '&', '>', '<',
-			'=', ':':
+			'=', ':', '?':
 			// Pseudo-symbols
 			switch b {
 			case '+':
@@ -221,18 +229,29 @@ loop:
 					break loop
 				}
 			case '!':
-				if src[offset] == '=' && !symbolExtender(src[offset+1]) {
-					offset++
-					result = tokens.Symbol
-					s.pseudo = tokens.NotEqual
-					s.value = "!="
-					break loop
-				}
-				if !symbolExtender(src[offset]) {
-					result = tokens.Symbol
-					s.pseudo = tokens.Not
-					s.value = "!"
-					break loop
+				switch src[offset] {
+				case '=':
+					if !symbolExtender(src[offset+1]) {
+						offset++
+						result = tokens.Symbol
+						s.pseudo = tokens.NotEqual
+						s.value = "!="
+						break loop
+					}
+				case ']':
+					if !symbolExtender(src[offset+1]) {
+						offset++
+						result = tokens.BangRBrack
+						s.value = "!]"
+						break loop
+					}
+				default:
+					if !symbolExtender(src[offset]) {
+						result = tokens.Symbol
+						s.pseudo = tokens.Not
+						s.value = "!"
+						break loop
+					}
 				}
 			case '&':
 				if src[offset] == '&' && !symbolExtender(src[offset+1]) {
@@ -240,6 +259,12 @@ loop:
 					result = tokens.Symbol
 					s.pseudo = tokens.LogicalAnd
 					s.value = "&&"
+					break loop
+				}
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.And
+					s.value = "&"
 					break loop
 				}
 			case '<':
@@ -301,9 +326,16 @@ loop:
 					result = tokens.Colon
 					break loop
 				}
+			case '?':
+				if !symbolExtender(src[offset]) {
+					result = tokens.Symbol
+					s.pseudo = tokens.Question
+					s.value = "?"
+					break loop
+				}
 			}
 			fallthrough
-		case '~', '@', '#', '$', '^', '?':
+		case '~', '@', '#', '$', '^':
 		symbolLoop:
 			for {
 				last := offset
@@ -330,7 +362,12 @@ loop:
 		case '}':
 			result = tokens.RBrace
 		case '[':
-			result = tokens.LBrack
+			if src[offset] == '!' {
+				offset++
+				result = tokens.LBrackBang
+			} else {
+				result = tokens.LBrack
+			}
 		case ']':
 			result = tokens.RBrack
 		case '(':
@@ -343,10 +380,12 @@ loop:
 					offset += 2
 					result = tokens.Symbol
 					s.pseudo = tokens.Spread
+					s.value = "..."
 				} else {
 					offset++
 					result = tokens.Symbol
 					s.pseudo = tokens.Range
+					s.value = ".."
 				}
 			} else {
 				result = tokens.Dot
@@ -420,6 +459,17 @@ loop:
 				}
 			case 'i':
 				switch src[offset] {
+				case 'd':
+					// identifiers
+					if src[offset+1] == 'e' && src[offset+2] == 'n' && src[offset+3] == 't' && src[offset+4] == 'i' &&
+						src[offset+5] == 'f' && src[offset+6] == 'i' && src[offset+7] == 'e' && src[offset+8] == 'r' &&
+						src[offset+9] == 's' && !identExtender(src[offset+10]) {
+						offset += 10
+						result = tokens.Identifier
+						s.pseudo = tokens.Identifiers
+						s.value = "identifiers"
+						break loop
+					}
 				case 'n':
 					switch src[offset+1] {
 					case 'f':
@@ -769,6 +819,7 @@ loop:
 				case '`':
 					s.value = string(src[copyFrom : offset-1])
 					result = tokens.Identifier
+					s.pseudo = tokens.Escaped
 					break loop
 				}
 			}
