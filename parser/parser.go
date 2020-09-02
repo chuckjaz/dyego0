@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"go/token"
 
 	"dyego0/assert"
 	"dyego0/ast"
@@ -20,10 +21,32 @@ type parser struct {
 	builder          ast.Builder
 	current          tokens.Token
 	pseudo           tokens.PseudoToken
+	operator         *selectedOperator
+	separatorState   separatorState
 	scope            vocabularyScope
 	vocabulary       vocabulary
 	embeddingContext *vocabularyEmbeddingContext
 	errors           []ast.Error
+}
+
+type separatorState int
+
+const (
+	normalState separatorState = iota
+	wasInfixState
+	separatorImplied
+)
+
+func (s separatorState) String() string {
+	switch s {
+	case normalState:
+		return "normalState"
+	case wasInfixState:
+		return "wasInfixState"
+	case separatorImplied:
+		return "separatorImplied"
+	}
+	return "!invlidSeparatorState"
 }
 
 // NewParser creates a new parser
@@ -34,6 +57,7 @@ func NewParser(scanner *scanner.Scanner, scope vocabularyScope) Parser {
 		scanner:          scanner,
 		builder:          builder,
 		pseudo:           tokens.InvalidPseudoToken,
+		separatorState:   normalState,
 		scope:            scope,
 		vocabulary:       context.result,
 		embeddingContext: context,
@@ -55,7 +79,11 @@ func (p *parser) Errors() []ast.Error {
 
 func (p *parser) report(msg string, args ...interface{}) ast.Error {
 	err := p.builder.Error(fmt.Sprintf(msg, args...))
-	p.errors = append(p.errors, err)
+	errors := p.errors
+	l := len(errors)
+	if l == 0 || errors[l-1].Start() != err.Start() {
+		p.errors = append(p.errors, err)
+	}
 	return err
 }
 
@@ -132,9 +160,32 @@ func (p *parser) expectsPseudo(ts ...tokens.PseudoToken) ast.Element {
 	return p.errors[len(p.errors)-1]
 }
 
+func (p *parser) expectItems(items ...interface{}) ast.Element {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	first := true
+	result := ""
+	for _, t := range items {
+		if !first {
+			result += ", "
+		}
+		result += fmt.Sprintf("%s", t)
+		first = false
+	}
+	if p.current == tokens.Identifier && p.pseudo != tokens.InvalidPseudoToken {
+		p.report("Expected one of %s, received %s", result, p.pseudo)
+	} else {
+		p.report("Expected one of %s, received %s", result, p.current)
+	}
+	p.next()
+	return p.errors[len(p.errors)-1]
+}
+
 func (p *parser) next() tokens.Token {
 	var next = p.scanner.Next()
 	p.current = next
+	p.separatorState = normalState
+	p.operator = nil
 	switch next {
 	case tokens.Identifier, tokens.Symbol:
 		p.pseudo = p.scanner.PseudoToken()
@@ -159,7 +210,9 @@ func (p *parser) expectIdent() ast.Name {
 
 func (p *parser) preserve() *parser {
 	scanner := p.scanner.Clone()
-	return &parser{scanner: scanner, builder: p.builder.Clone(scanner), current: p.current, pseudo: p.pseudo, errors: p.errors}
+	builder := p.builder.Clone(scanner)
+	return &parser{scanner: scanner, builder: builder, current: p.current, pseudo: p.pseudo, operator: p.operator,
+		separatorState: p.separatorState, errors: p.errors}
 }
 
 func (p *parser) restore(parser *parser) {
@@ -167,13 +220,86 @@ func (p *parser) restore(parser *parser) {
 	p.builder = parser.builder
 	p.current = parser.current
 	p.pseudo = parser.pseudo
+	p.operator = parser.operator
+	p.separatorState = parser.separatorState
 	p.errors = parser.errors
+}
+
+func (p *parser) firstOf(options ...func() ast.Element) ast.Element {
+	preserved := p.preserve()
+	firstErrorIndex := len(p.errors)
+	var longestErrorOption *parser
+	longestErrorEnd := token.Pos(0)
+	var errorResult ast.Element
+	for _, option := range options {
+		result := option()
+		if len(p.errors) > firstErrorIndex {
+			e := p.errors[firstErrorIndex].End()
+			if e > longestErrorEnd {
+				longestErrorOption = p.preserve()
+				errorResult = result
+				longestErrorEnd = e
+			}
+			p.restore(preserved)
+		} else {
+			return result
+		}
+	}
+	assert.Assert(longestErrorOption != nil, "An error option was expected")
+	p.restore(longestErrorOption)
+	return errorResult
+}
+
+func (p *parser) firstOfArray(options ...func() []ast.Element) []ast.Element {
+	preserved := p.preserve()
+	firstErrorIndex := len(p.errors)
+	var longestErrorOption *parser
+	longestErrorEnd := token.Pos(0)
+	var errorResult []ast.Element
+	for _, option := range options {
+		result := option()
+		if len(p.errors) > firstErrorIndex {
+			e := p.errors[firstErrorIndex].End()
+			if e > longestErrorEnd {
+				longestErrorOption = p.preserve()
+				errorResult = result
+				longestErrorEnd = e
+			}
+			p.restore(preserved)
+		} else {
+			return result
+		}
+	}
+	assert.Assert(longestErrorOption != nil, "An error option was expected")
+	p.restore(longestErrorOption)
+	return errorResult
+}
+
+func (p *parser) separator() bool {
+	if p.current == tokens.Comma {
+		p.next()
+		return true
+	} else if p.scanner.NewLineLocation().IsValid() {
+		switch p.separatorState {
+		case wasInfixState, separatorImplied:
+			return false
+		}
+		if p.pseudo != tokens.Escaped {
+			op := p.findOperator(ast.Infix, false)
+			if op != nil {
+				return false
+			}
+		}
+		p.separatorState = separatorImplied
+		return true
+	}
+	return false
 }
 
 var primitiveTokens = []tokens.Token{
 	tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 	tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
-	tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.Let,
+	tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.Let, tokens.LBrack, tokens.LBrackBang,
 }
 
 func (p *parser) sequence() ast.Element {
@@ -201,19 +327,20 @@ func (p *parser) sequence() ast.Element {
 		}
 	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.LBrace,
-		tokens.LParen, tokens.Let:
+		tokens.LParen, tokens.Let, tokens.LBrack, tokens.LBrackBang:
 		left = p.expression()
+	case tokens.Var, tokens.Val:
+		left = p.varDeclaration()
 	case tokens.Return:
 		left = p.returnStatement()
 	default:
 		left = p.expects(primitiveTokens...)
 	}
-	if p.current == tokens.Comma {
-		p.next()
+	if p.separator() {
 		switch p.current {
 		case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 			tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
-			tokens.LParen, tokens.Symbol, tokens.Let:
+			tokens.LParen, tokens.Symbol, tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.Var, tokens.Val, tokens.Return:
 			right := p.sequence()
 			return p.builder.Sequence(left, right)
 		}
@@ -225,7 +352,7 @@ func (p *parser) expression() ast.Element {
 	switch p.current {
 	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
-		tokens.LParen, tokens.Symbol, tokens.Let:
+		tokens.LParen, tokens.Symbol, tokens.Let, tokens.LBrack, tokens.LBrackBang:
 		return p.operatorExpression(p.embeddingContext.lowestLevel)
 	default:
 		return p.expects(primitiveTokens...)
@@ -239,6 +366,10 @@ type selectedOperator struct {
 	placement ast.OperatorPlacement
 }
 
+func (op *selectedOperator) String() string {
+	return fmt.Sprintf("op(%s, %d, %s, %s)", op.name, op.level.Level(), op.assoc, op.placement)
+}
+
 func selectOp(name ast.Name, op operator, placement ast.OperatorPlacement) *selectedOperator {
 	level := op.Levels()[placement]
 	if level != nil {
@@ -247,11 +378,19 @@ func selectOp(name ast.Name, op operator, placement ast.OperatorPlacement) *sele
 	return nil
 }
 
-func (o *selectedOperator) isHigher(level precedenceLevel) bool {
-	return (o.level == level && o.assoc == ast.Right) || o.level.IsHigherThan(level)
+func (op *selectedOperator) isHigher(level precedenceLevel) bool {
+	return (op.level == level && op.assoc == ast.Right) || op.level.IsHigherThan(level)
 }
 
-func (p *parser) findOperator(placement ast.OperatorPlacement) *selectedOperator {
+var noOperatorSentinal = &selectedOperator{}
+
+func (p *parser) findOperator(placement ast.OperatorPlacement, includeTypeMember bool) *selectedOperator {
+	if placement == ast.Infix && p.operator != nil {
+		if p.operator == noOperatorSentinal {
+			return nil
+		}
+		return p.operator
+	}
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	switch p.current {
@@ -259,18 +398,33 @@ func (p *parser) findOperator(placement ast.OperatorPlacement) *selectedOperator
 		text := p.scanner.Value().(string)
 		element, ok := p.vocabulary.Get(text)
 		if !ok {
-			return nil
+			if includeTypeMember && placement == ast.Infix && p.current == tokens.Identifier {
+				element, ok = p.vocabulary.Get(infixTypeMember)
+				if ok {
+				}
+			}
+			if !ok {
+				if placement == ast.Infix {
+					p.operator = noOperatorSentinal
+				}
+				return nil
+			}
 		}
 		op, ok := element.(operator)
 		if !ok {
+			if placement == ast.Infix {
+				p.operator = noOperatorSentinal
+			}
 			return nil
 		}
 		if placement == ast.Postfix {
 			text = "postfix " + text
 		}
 		name := p.builder.Name(text)
-		return selectOp(name, op, placement)
+		p.operator = selectOp(name, op, placement)
+		return p.operator
 	}
+	p.operator = noOperatorSentinal
 	return nil
 }
 
@@ -287,25 +441,26 @@ func (p *parser) operatorExpression(level precedenceLevel) ast.Element {
 	defer p.builder.PopContext()
 
 	var left ast.Element
-	op := p.findOperator(ast.Prefix)
+	op := p.findOperator(ast.Prefix, false)
 	if op != nil && op.isHigher(level) {
 		p.next()
 		left = p.unaryOp(p.operatorExpression(op.level), op)
 	} else {
 		left = p.simpleExpression()
 	}
-	op = p.findOperator(ast.Postfix)
+	op = p.findOperator(ast.Postfix, false)
 	for op != nil && op.isHigher(level) {
 		p.next()
 		left = p.unaryOp(left, op)
-		op = p.findOperator(ast.Postfix)
+		op = p.findOperator(ast.Postfix, false)
 	}
-	op = p.findOperator(ast.Infix)
+	op = p.findOperator(ast.Infix, !p.scanner.NewLineLocation().IsValid())
 	for op != nil && op.isHigher(level) {
 		p.next()
+		p.separatorState = wasInfixState
 		right := p.operatorExpression(op.level)
 		left = p.binaryOp(left, op, right)
-		op = p.findOperator(ast.Infix)
+		op = p.findOperator(ast.Infix, true)
 	}
 	return left
 }
@@ -316,7 +471,7 @@ func (p *parser) simpleExpression() ast.Element {
 	switch p.current {
 	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
-		tokens.LParen, tokens.Let:
+		tokens.LParen, tokens.Let, tokens.LBrack, tokens.LBrackBang:
 		left := p.primitive()
 		for {
 			switch p.current {
@@ -325,6 +480,10 @@ func (p *parser) simpleExpression() ast.Element {
 				continue
 			case tokens.LParen:
 				left = p.call(left)
+				continue
+			case tokens.LBrack:
+				left = p.index(left)
+				continue
 			}
 			break
 		}
@@ -351,25 +510,40 @@ func (p *parser) call(left ast.Element) ast.Element {
 	return p.builder.Call(left, arguments)
 }
 
+func (p *parser) index(left ast.Element) ast.Element {
+	p.expect(tokens.LBrack)
+	arguments := p.arguments()
+	p.expect(tokens.RBrack)
+	if p.pseudo == tokens.Equal {
+		p.next()
+		arguments = append(arguments, p.expression())
+		name := p.builder.Name("set")
+		selection := p.builder.Selection(left, name)
+		return p.builder.Call(selection, arguments)
+	}
+	name := p.builder.Name("get")
+	selection := p.builder.Selection(left, name)
+	return p.builder.Call(selection, arguments)
+}
+
 func (p *parser) arguments() []ast.Element {
 	var arguments []ast.Element
 	switch p.current {
 	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
-		tokens.LBrace, tokens.LParen, tokens.Symbol:
+		tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.Colon:
 		for {
 			switch p.current {
 			case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 				tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
-				tokens.LBrace, tokens.LParen, tokens.Symbol:
+				tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.Colon:
 				argument := p.argument()
 				arguments = append(arguments, argument)
-				if p.current == tokens.Comma {
-					p.next()
+				if p.separator() {
 					switch p.current {
 					case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 						tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
-						tokens.LBrace, tokens.LParen, tokens.Symbol:
+						tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.Colon:
 						continue
 					}
 				}
@@ -381,21 +555,32 @@ func (p *parser) arguments() []ast.Element {
 }
 
 func (p *parser) argument() ast.Element {
-	preserved := p.preserve()
-	namedArgument := p.namedArgument()
-	if len(p.errors) > len(preserved.errors) {
-		// not a named arguemnt
-		p.restore(preserved)
-		return p.expression()
-	}
-	return namedArgument
+	return p.firstOf(func() ast.Element {
+		return p.namedArgument()
+	}, func() ast.Element {
+		result := p.expression()
+		if p.current == tokens.Colon {
+			p.expect(tokens.Comma)
+		}
+		return result
+	})
 }
 
 func (p *parser) namedArgument() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
-	name := p.expectIdent()
-	p.expectPseudo(tokens.Equal)
+	var name ast.Name
+	if p.current == tokens.Colon {
+		p.next()
+		if p.current != tokens.Identifier {
+			name = p.expectIdent()
+		} else {
+			name = p.builder.Name(p.scanner.Value().(string))
+		}
+	} else {
+		name = p.expectIdent()
+		p.expect(tokens.Colon)
+	}
 	value := p.expression()
 	return p.builder.NamedArgument(name, value)
 }
@@ -404,9 +589,12 @@ func (p *parser) whenExpression() ast.When {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	p.expectPseudo(tokens.When)
-	p.expect(tokens.LParen)
-	target := p.expression()
-	p.expect(tokens.RParen)
+	var target ast.Element
+	if p.current == tokens.LParen {
+		p.next()
+		target = p.expression()
+		p.expect(tokens.RParen)
+	}
 	p.expect(tokens.LBrace)
 	clauses := p.whenClauses()
 	p.expect(tokens.RBrace)
@@ -421,8 +609,7 @@ func (p *parser) whenClauses() []ast.Element {
 		case tokens.Identifier:
 			if p.pseudo == tokens.Else {
 				result = append(result, p.whenElseClause())
-				if p.current == tokens.Comma {
-					p.next()
+				if p.separator() {
 					continue
 				} else {
 					break
@@ -433,12 +620,11 @@ func (p *parser) whenClauses() []ast.Element {
 			tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
 			tokens.LBrace, tokens.LParen, tokens.Symbol:
 			result = append(result, p.whenValueClause())
-			if p.current == tokens.Comma {
-				p.next()
+			if p.separator() {
 				continue
 			}
 		}
-		if p.current == tokens.Comma {
+		if p.separator() {
 			switch p.current {
 			case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 				tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
@@ -448,9 +634,7 @@ func (p *parser) whenClauses() []ast.Element {
 		}
 		break
 	}
-	if p.current == tokens.Comma {
-		p.next()
-	}
+	p.separator()
 	return result
 }
 
@@ -484,52 +668,60 @@ func (p *parser) lambda() ast.Element {
 	parameters := p.lambdaParameters()
 	var expression ast.Element
 	if p.current != tokens.RBrace {
-		expression = p.expression()
+		expression = p.sequence()
 	}
 	p.expect(tokens.RBrace)
 	return p.builder.Lambda(typeParameters, parameters, expression)
 }
 
 func (p *parser) typeParametersClause() ast.TypeParameters {
-	p.builder.PushContext()
-	defer p.builder.PopContext()
-	state := p.preserve()
-	typeParameters := p.typeParameters()
-	whereClauses := p.whereClauses()
-	if p.pseudo != tokens.Bar {
-		p.restore(state)
+	result, _ := p.firstOf(func() ast.Element {
+		p.builder.PushContext()
+		defer p.builder.PopContext()
+		typeParameters := p.typeParameters()
+		whereClauses := p.whereClauses()
+		p.expectPseudo(tokens.Bar)
+		return p.builder.TypeParameters(typeParameters, whereClauses)
+	}, func() ast.Element {
 		return nil
-	}
-	p.expectPseudo(tokens.Bar)
-	return p.builder.TypeParameters(typeParameters, whereClauses)
+	}).(ast.TypeParameters)
+	return result
 }
 
 func (p *parser) typeParameters() []ast.TypeParameter {
-	state := p.preserve()
-	var result []ast.TypeParameter
-	for {
-		switch p.current {
-		case tokens.Identifier:
-			typeParameter := p.typeParameter()
-			result = append(result, typeParameter)
-			if p.current == tokens.Comma {
-				p.expect(tokens.Comma)
-				if p.pseudo != tokens.Bar && p.pseudo != tokens.Where {
-					continue
+	result := p.firstOfArray(func() []ast.Element {
+		var result []ast.Element
+		for {
+			switch p.current {
+			case tokens.Identifier:
+				typeParameter := p.typeParameter()
+				result = append(result, typeParameter)
+				if p.separator() {
+					if p.pseudo != tokens.Bar && p.pseudo != tokens.Where {
+						continue
+					}
+				}
+			case tokens.Symbol:
+				if p.pseudo == tokens.Bar {
+					break
 				}
 			}
-		case tokens.Symbol:
-			if p.pseudo == tokens.Bar {
-				break
-			}
+			break
 		}
-		break
-	}
-	if p.pseudo != tokens.Bar && p.pseudo != tokens.Where {
-		p.restore(state)
+		switch p.pseudo {
+		case tokens.Bar, tokens.Where:
+			return result
+		}
+		p.expectPseudo(tokens.Bar)
+		return result
+	}, func() []ast.Element {
 		return nil
+	})
+	var params []ast.TypeParameter
+	for _, param := range result {
+		params = append(params, param.(ast.TypeParameter))
 	}
-	return result
+	return params
 }
 
 func (p *parser) whereClauses() []ast.Where {
@@ -568,24 +760,27 @@ func (p *parser) typeParameter() ast.TypeParameter {
 }
 
 func (p *parser) lambdaParameters() []ast.Parameter {
-	state := p.preserve()
-	result := p.parameters()
-	if p.pseudo != tokens.Arrow {
-		p.restore(state)
+	result := p.firstOfArray(func() []ast.Element {
+		result := p.parameters()
+		p.expectPseudo(tokens.Arrow)
+		return result
+	}, func() []ast.Element {
 		return nil
+	})
+	var params []ast.Parameter
+	for _, param := range result {
+		params = append(params, param.(ast.Parameter))
 	}
-	p.expectPseudo(tokens.Arrow)
-	return result
+	return params
 }
 
-func (p *parser) parameters() []ast.Parameter {
-	var result []ast.Parameter
+func (p *parser) parameters() []ast.Element {
+	var result []ast.Element
 	for {
 		if p.current == tokens.Identifier {
 			parameter := p.parameter()
 			result = append(result, parameter)
-			if p.current == tokens.Comma {
-				p.next()
+			if p.separator() {
 				if p.current == tokens.Identifier {
 					continue
 				}
@@ -671,6 +866,18 @@ func (p *parser) primitive() ast.Element {
 		return result
 	case tokens.LBrace:
 		return p.lambda()
+	case tokens.LBrack:
+		return p.firstOf(func() ast.Element {
+			return p.readOnlyObjectInitializer()
+		}, func() ast.Element {
+			return p.readOnlyArrayInitializer()
+		})
+	case tokens.LBrackBang:
+		return p.firstOf(func() ast.Element {
+			return p.mutableObjectInitializer()
+		}, func() ast.Element {
+			return p.mutableArrayInitializer()
+		})
 	case tokens.LParen:
 		p.expect(tokens.LParen)
 		expr := p.expression()
@@ -721,8 +928,127 @@ func (p *parser) spreadReference() ast.Element {
 }
 
 func (p *parser) typeReference() ast.Element {
-	// TODO: Implement
-	return p.expectIdent()
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	result := p.simpleTypeReference()
+	operator := p.typeOperator()
+	if operator != nil {
+		target := p.builder.Selection(result, operator)
+		result = p.builder.Call(target, []ast.Element{p.typeReference()})
+	}
+	return result
+}
+
+func (p *parser) typeOperator() ast.Name {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	if p.current == tokens.Symbol {
+		if p.pseudo == tokens.And {
+			name := p.builder.Name(p.scanner.Value().(string))
+			p.next()
+			return name
+		}
+	}
+	return nil
+}
+
+func (p *parser) simpleTypeReference() ast.Element {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	result := p.typeReferencePrimitive()
+	for {
+		switch p.current {
+		case tokens.Dot:
+			p.next()
+			name := p.expectIdent()
+			result = p.builder.Selection(result, name)
+			continue
+		case tokens.LBrack:
+			p.next()
+			p.expect(tokens.RBrack)
+			result = p.builder.SequenceType(result)
+			continue
+		case tokens.Symbol:
+			if p.pseudo == tokens.Question {
+				p.next()
+				result = p.builder.OptionalType(result)
+				continue
+			}
+		}
+		break
+	}
+	return result
+}
+
+func (p *parser) typeReferencePrimitive() ast.Element {
+	switch p.current {
+	case tokens.LParen:
+		p.next()
+		result := p.typeReference()
+		p.expect(tokens.RParen)
+		return result
+	case tokens.Symbol:
+		if p.pseudo == tokens.LessThan {
+			return p.typeLiteral()
+		}
+		fallthrough
+	default:
+		return p.expectIdent()
+	}
+}
+
+func (p *parser) typeLiteral() ast.TypeLiteral {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expectPseudo(tokens.LessThan)
+	var members []ast.Element
+	for {
+		switch p.current {
+		case tokens.LBrace:
+			members = append(members, p.callableTypeMember())
+		case tokens.Symbol:
+			if p.pseudo == tokens.GreaterThan {
+				break
+			}
+			fallthrough
+		case tokens.Identifier:
+			members = append(members, p.typeLiteralMember())
+		}
+		if p.separator() {
+			continue
+		}
+		break
+	}
+	p.separator()
+	p.expectPseudo(tokens.GreaterThan)
+	return p.builder.TypeLiteral(members)
+}
+
+func (p *parser) typeLiteralMember() ast.TypeLiteralMember {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	var name ast.Name
+	switch p.current {
+	case tokens.Identifier, tokens.Symbol:
+		name = p.builder.Name(p.scanner.Value().(string))
+		p.next()
+	default:
+		name = p.expectIdent()
+	}
+	p.expect(tokens.Colon)
+	typ := p.typeReference()
+	return p.builder.TypeLiteralMember(name, typ)
+}
+
+func (p *parser) callableTypeMember() ast.CallableTypeMember {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expect(tokens.LBrace)
+	parameters := p.parameters()
+	p.expectPseudo(tokens.Arrow)
+	resultType := p.typeReference()
+	p.expect(tokens.RBrace)
+	return p.builder.CallableTypeMember(parameters, resultType)
 }
 
 func (p *parser) definition() ast.Element {
@@ -731,7 +1057,7 @@ func (p *parser) definition() ast.Element {
 	switch p.current {
 	case tokens.Let:
 		p.next()
-		name := p.expectIdent()
+		name := p.definitionName()
 		p.expectPseudo(tokens.Equal)
 		value := p.letValue()
 		return p.builder.LetDefinition(name, value)
@@ -740,15 +1066,187 @@ func (p *parser) definition() ast.Element {
 	}
 }
 
+func (p *parser) definitionName() ast.Element {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	var result ast.Element = p.expectIdent()
+	for p.current == tokens.Dot {
+		p.next()
+		name := p.expectIdent()
+		result = p.builder.Selection(result, name)
+	}
+	return result
+}
+
 func (p *parser) letValue() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	switch p.current {
+	case tokens.LBrace:
+		return p.lambda()
 	case tokens.VocabularyStart:
 		return p.vocabularyLiteral()
+	case tokens.LiteralString, tokens.LiteralRune, tokens.LiteralInt, tokens.LiteralByte, tokens.LiteralUInt,
+		tokens.LiteralLong, tokens.LiteralULong, tokens.LiteralFloat, tokens.LiteralDouble:
+		return p.primitive()
+	case tokens.Symbol:
+		if p.pseudo == tokens.LessThan {
+			return p.typeLiteral()
+		}
+		fallthrough
 	default:
-		return p.expects(tokens.VocabularyStart)
+		return p.expectItems(tokens.VocabularyStart, tokens.LessThan, tokens.LBrace)
 	}
+}
+
+func (p *parser) varDeclaration() ast.VarDefinition {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	var mutable = false
+	if p.current == tokens.Var {
+		mutable = true
+		p.next()
+	} else {
+		p.expect(tokens.Val)
+	}
+	name := p.expectIdent()
+	var typ ast.Element
+	if p.current == tokens.Colon {
+		p.next()
+		typ = p.typeReference()
+	}
+	var value ast.Element
+	if p.pseudo == tokens.Equal {
+		p.next()
+		value = p.expression()
+	}
+	return p.builder.VarDefinition(name, typ, value, mutable)
+}
+
+func (p *parser) readOnlyObjectInitializer() ast.ObjectInitializer {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expect(tokens.LBrack)
+	typ := p.initializerType()
+	members := p.memberInitializers()
+	p.expect(tokens.RBrack)
+	return p.builder.ObjectInitializer(false, typ, members)
+}
+
+func (p *parser) initializerType() ast.Element {
+	if p.pseudo == tokens.LessThan {
+		p.next()
+		typ := p.typeReference()
+		p.expectPseudo(tokens.GreaterThan)
+		return typ
+	}
+	return nil
+}
+
+func (p *parser) mutableObjectInitializer() ast.ObjectInitializer {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expect(tokens.LBrackBang)
+	typ := p.initializerType()
+	members := p.memberInitializers()
+	p.expect(tokens.BangRBrack)
+	return p.builder.ObjectInitializer(true, typ, members)
+}
+
+func (p *parser) memberInitializers() []ast.Element {
+	var result []ast.Element
+	for {
+		switch p.current {
+		case tokens.Identifier, tokens.Colon:
+			result = append(result, p.memberInitializer())
+		case tokens.Symbol:
+			if p.pseudo == tokens.Spread {
+				result = append(result, p.memberInitializer())
+			}
+		}
+		if p.separator() {
+			continue
+		}
+		break
+	}
+	return result
+}
+
+func (p *parser) memberInitializer() ast.Element {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	switch p.current {
+	case tokens.Colon:
+		p.next()
+		var name ast.Name
+		if p.current == tokens.Identifier {
+			name = p.builder.Name(p.scanner.Value().(string))
+		} else {
+			name = p.expectIdent()
+		}
+		// Intentionally do not call p.next() so the identifier is considered part of the expression
+		value := p.expression()
+		return p.builder.NamedMemberInitializer(name, nil, value)
+	case tokens.Identifier:
+		name := p.expectIdent()
+		p.expect(tokens.Colon)
+		value := p.expression()
+		return p.builder.NamedMemberInitializer(name, nil, value)
+	case tokens.Symbol:
+		if p.pseudo == tokens.Spread {
+			p.next()
+			spreadValue := p.expression()
+			return p.builder.SpreadMemberInitializer(spreadValue)
+		}
+	}
+	return p.expectIdent()
+}
+
+func (p *parser) readOnlyArrayInitializer() ast.ArrayInitializer {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expect(tokens.LBrack)
+	typ := p.initializerType()
+	elements := p.arrayElements()
+	p.expect(tokens.RBrack)
+	return p.builder.ArrayInitializer(false, typ, elements)
+}
+
+func (p *parser) mutableArrayInitializer() ast.ArrayInitializer {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expect(tokens.LBrackBang)
+	typ := p.initializerType()
+	elements := p.arrayElements()
+	p.expect(tokens.BangRBrack)
+	return p.builder.ArrayInitializer(true, typ, elements)
+}
+
+func (p *parser) arrayElements() []ast.Element {
+	var elements []ast.Element
+	for {
+		switch p.current {
+		case tokens.Symbol:
+			if p.pseudo == tokens.Spread {
+				elements = append(elements, p.memberInitializer())
+				if p.separator() {
+					continue
+				}
+				break
+			}
+			fallthrough
+		case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
+			tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
+			tokens.LParen, tokens.Let, tokens.LBrack, tokens.LBrackBang:
+			elements = append(elements, p.expression())
+		}
+		if p.separator() {
+			continue
+		}
+		break
+	}
+	p.separator()
+	return elements
 }
 
 func (p *parser) vocabularyLiteral() ast.VocabularyLiteral {
@@ -780,9 +1278,10 @@ func (p *parser) vocabularyMembers() []ast.Element {
 			} else {
 				break
 			}
-		case tokens.Comma:
-			p.next()
-			continue
+		default:
+			if p.separator() {
+				continue
+			}
 		}
 		break
 	}
@@ -826,7 +1325,13 @@ func (p *parser) vocabularyOperatorDeclaration() ast.Element {
 func (p *parser) names() []ast.Name {
 	switch p.current {
 	case tokens.Identifier:
-		name := p.expectIdent()
+		var name ast.Name
+		if p.pseudo == tokens.Identifiers {
+			name = p.builder.Name(infixTypeMember)
+			p.next()
+		} else {
+			name = p.expectIdent()
+		}
 		return []ast.Name{name}
 	case tokens.LParen:
 		p.next()
@@ -836,10 +1341,11 @@ func (p *parser) names() []ast.Name {
 			case tokens.Identifier:
 				name := p.expectIdent()
 				result = append(result, name)
-				continue
-			case tokens.Comma:
-				p.next()
-				continue
+				fallthrough
+			default:
+				if p.separator() {
+					continue
+				}
 			}
 			break
 		}
@@ -984,7 +1490,7 @@ func (p *parser) returnStatement() ast.Return {
 	switch p.current {
 	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
 		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
-		tokens.LBrace, tokens.LParen, tokens.Symbol:
+		tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.LBrack, tokens.LBrackBang, tokens.Identifier:
 		value = p.expression()
 	}
 	return p.builder.Return(value)

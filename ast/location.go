@@ -1,6 +1,9 @@
 package ast
 
-import "go/token"
+import (
+	"fmt"
+	"go/token"
+)
 
 // Locatable allows locating an item in a source file
 type Locatable interface {
@@ -32,4 +35,8 @@ func (l Location) End() token.Pos {
 // Length is the length of the item (End() - Start().
 func (l Location) Length() int {
 	return int(l.end) - int(l.start)
+}
+
+func (l Location) String() string {
+	return fmt.Sprintf("Location(%d-%d)", l.start, l.end)
 }

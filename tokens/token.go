@@ -55,6 +55,12 @@ const (
 	// RBrack ']'
 	RBrack
 
+	// LBrackBang '[!'
+	LBrackBang
+
+	// BangRBrack '!]'
+	BangRBrack
+
 	// LBrace '{'
 	LBrace
 
@@ -125,6 +131,8 @@ var tokens = [...]string{
 	RParen:          ")",
 	LBrack:          "[",
 	RBrack:          "]",
+	LBrackBang:      "[!",
+	BangRBrack:      "!]",
 	LBrace:          "{",
 	RBrace:          "}",
 	Semi:            ";",
@@ -171,6 +179,9 @@ const (
 	// Else is a pseudo token "else"
 	Else
 
+	// Identifiers is a pseudo token "identifiers"
+	Identifiers
+
 	// Infix is the pseudo token "infix"
 	Infix
 
@@ -200,6 +211,9 @@ const (
 
 	// Add '+'
 	Add
+
+	// And '&'
+	And
 
 	// Bar '|'
 	Bar
@@ -246,6 +260,9 @@ const (
 	// LessThanEqual '<='
 	LessThanEqual
 
+	// Question '?'
+	Question
+
 	// Arrow '->'
 	Arrow
 
@@ -259,6 +276,9 @@ const (
 
 	// InvalidPseudoToken is an out of band value for pseudo token
 	InvalidPseudoToken
+
+	// Escaped is an escaped identifier using the `...` syntax
+	Escaped
 )
 
 var pseudoTokens = [...]string{
@@ -267,6 +287,7 @@ var pseudoTokens = [...]string{
 	Break:            "break",
 	Continue:         "continue",
 	Else:             "else",
+	Identifiers:      "identifiers",
 	Infix:            "infix",
 	Left:             "left",
 	Loop:             "loop",
@@ -277,6 +298,7 @@ var pseudoTokens = [...]string{
 	When:             "when",
 	Where:            "where",
 	Add:              "+",
+	And:              "&",
 	Bar:              "|",
 	Sub:              "-",
 	Mult:             "*",
@@ -292,9 +314,11 @@ var pseudoTokens = [...]string{
 	NotEqual:         "!=",
 	LessThan:         "<",
 	LessThanEqual:    "<=",
+	Question:         "?",
 	Arrow:            "->",
 	Range:            "..",
 	Spread:           "...",
+	Escaped:          "<escaped>",
 }
 
 func (t PseudoToken) String() string {

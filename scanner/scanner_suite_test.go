@@ -29,6 +29,11 @@ func scanString(text string, expected ...tokens.Token) int {
 	return scanBytes(src, expected...)
 }
 
+func scannerOf(text string) *scanner.Scanner {
+	src := append([]byte(text), 0)
+	return scanner.NewScanner(src, 0)
+}
+
 var _ = Describe("scanner", func() {
 	Describe("when constructing the instance", func() {
 		It("should not panic", func() {
@@ -99,6 +104,20 @@ var _ = Describe("scanner", func() {
 		})
 		It("can scan a integer range", func() {
 			scanString("1..4", tokens.LiteralInt, tokens.Symbol, tokens.LiteralInt)
+		})
+		It("can indicate where the nl was", func() {
+			s := scannerOf("a b \n c d \n e")
+			Expect(s.NewLineLocation()).To(Equal(token.Pos(0)))
+			s.Next()
+			Expect(s.NewLineLocation()).To(Equal(token.Pos(0)))
+			s.Next()
+			Expect(s.NewLineLocation()).To(Equal(token.Pos(0)))
+			s.Next()
+			Expect(s.NewLineLocation()).To(Equal(token.Pos(4)))
+			s.Next()
+			Expect(s.NewLineLocation()).To(Equal(token.Pos(0)))
+			s.Next()
+			Expect(s.NewLineLocation()).To(Equal(token.Pos(10)))
 		})
 	})
 })

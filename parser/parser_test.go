@@ -2,12 +2,12 @@ package parser
 
 import (
 	"fmt"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"io/ioutil"
 	"sort"
 	"strings"
 	"testing"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 
 	"go/token"
 
@@ -21,6 +21,16 @@ var _ = Describe("parser", func() {
 		b := ast.NewBuilder(scan(""))
 		b.PushContext()
 		return b
+	}
+	i := func(n ast.Element, value int) {
+		v, ok := n.(ast.LiteralInt)
+		Expect(ok).To(BeTrue())
+		Expect(v.Value()).To(Equal(value))
+	}
+	n := func(n ast.Element, value string) {
+		v, ok := n.(ast.Name)
+		Expect(ok).To(BeTrue())
+		Expect(v.Text()).To(Equal(value))
 	}
 	Describe("literals", func() {
 		It("can parse a rune", func() {
@@ -84,6 +94,142 @@ var _ = Describe("parser", func() {
 			Expect(l.Value()).To(Equal(10))
 		})
 	})
+	named := func(name string, o ast.ObjectInitializer) ast.Element {
+		for _, member := range o.Members() {
+			namedMember, ok := member.(ast.NamedMemberInitializer)
+			if ok {
+				if namedMember.Name().Text() == name {
+					return namedMember.Value()
+				}
+			}
+		}
+		assert.Fail("No member named %s found", name)
+		return nil
+	}
+	Describe("object initializer", func() {
+		obj := func(text string) ast.ObjectInitializer {
+			r := parse(text)
+			o, ok := r.(ast.ObjectInitializer)
+			Expect(ok).To(BeTrue())
+			return o
+		}
+		ro := func(text string) ast.ObjectInitializer {
+			obj := obj(text)
+			Expect(obj.Mutable()).To(BeFalse())
+			return obj
+		}
+		mo := func(text string) ast.ObjectInitializer {
+			obj := obj(text)
+			Expect(obj.Mutable()).To(BeTrue())
+			return obj
+		}
+		Describe("read only", func() {
+			It("can parse one field", func() {
+				o := ro("[a: 1]")
+				v := named("a", o)
+				i(v, 1)
+			})
+			It("can parse two fields", func() {
+				o := ro("[a: 1, b: 2]")
+				i(named("a", o), 1)
+				i(named("b", o), 2)
+			})
+			It("can parse typed", func() {
+				o := ro("[<A> a: 1]")
+				i(named("a", o), 1)
+				n(o.Type(), "A")
+			})
+			It("can parse simpilified member", func() {
+				o := ro("[:a]")
+				n(named("a", o), "a")
+			})
+			It("can parse a member spread", func() {
+				o := ro("[...a]")
+				s := o.Members()[0].(ast.SpreadMemberInitializer)
+				n(s.Target(), "a")
+			})
+		})
+		Describe("mutable", func() {
+			It("can parse one field", func() {
+				o := mo("[! a: 1 !]")
+				v := named("a", o)
+				i(v, 1)
+			})
+			It("can parse two fields", func() {
+				o := mo("[! a: 1, b: 2 !]")
+				i(named("a", o), 1)
+				i(named("b", o), 2)
+			})
+			It("can parse typed", func() {
+				o := mo("[! <A> a: 1 !]")
+				i(named("a", o), 1)
+				n(o.Type(), "A")
+			})
+		})
+	})
+	Describe("object initializer", func() {
+		arr := func(text string) ast.ArrayInitializer {
+			r := parse(text)
+			o, ok := r.(ast.ArrayInitializer)
+			Expect(ok).To(BeTrue())
+			return o
+		}
+		ra := func(text string) ast.ArrayInitializer {
+			a := arr(text)
+			Expect(a.Mutable()).To(BeFalse())
+			return a
+		}
+		ma := func(text string) ast.ArrayInitializer {
+			a := arr(text)
+			Expect(a.Mutable()).To(BeTrue())
+			return a
+		}
+		obj := func(e ast.Element) ast.ObjectInitializer {
+			o, ok := e.(ast.ObjectInitializer)
+			Expect(ok).To(BeTrue())
+			return o
+		}
+		Describe("read only", func() {
+			It("can parse an single element array", func() {
+				a := ra("[ 1 ]")
+				i(a.Elements()[0], 1)
+			})
+			It("can parse a multi-element array", func() {
+				a := ra("[ 1, 2, 3]")
+				i(a.Elements()[0], 1)
+				i(a.Elements()[1], 2)
+				i(a.Elements()[2], 3)
+			})
+			It("can parse a typed array", func() {
+				a := ra("[<A> 1]")
+				i(a.Elements()[0], 1)
+				n(a.Type(), "A")
+			})
+			It("can parse a nested array", func() {
+				a := ra("[ [ a: 1] ]")
+				i(named("a", obj(a.Elements()[0])), 1)
+			})
+			It("can parse mixed array", func() {
+				parse(`
+                  ...dyego
+
+                  [<Sphere[]>
+                    [ center: [ x: -1.0, y: 1.0 - t/10.0, z: 3.0 ]
+                      radius: 0.3
+                      color: red ]
+                    [ center: [ x: 0.0, y: 1.0 - t/10.0, z: 3.0 - t/4.0 ]
+                      radius: 0.3
+                      color: red ]
+                  ]`)
+			})
+		})
+		Describe("mutable", func() {
+			It("can parse an single element array", func() {
+				a := ma("[! 1 !]")
+				i(a.Elements()[0], 1)
+			})
+		})
+	})
 	Describe("simple expression", func() {
 		It("can parse a selection", func() {
 			l, ok := parse("a.b").(ast.Selection)
@@ -96,22 +242,42 @@ var _ = Describe("parser", func() {
 			Expect(l.End()).To(Equal(token.Pos(3)))
 		})
 		It("can parse a call", func() {
-			c, ok := parse("a(10, b = 2)").(ast.Call)
+			na := func(e ast.Element) ast.NamedArgument {
+				r, ok := e.(ast.NamedArgument)
+				Expect(ok).To(BeTrue())
+				return r
+			}
+			c, ok := parse("a(10, b: 2, :c)").(ast.Call)
 			Expect(ok).To(Equal(true))
-			n, ok := c.Target().(ast.Name)
-			Expect(ok).To(Equal(true))
-			Expect(n.Text()).To(Equal("a"))
+			n(c.Target(), "a")
 			arguments := c.Arguments()
-			Expect(len(arguments)).To(Equal(2))
-			num, ok := arguments[0].(ast.LiteralInt)
-			Expect(ok).To(Equal(true))
-			Expect(num.Value()).To(Equal(10))
-			na, ok := arguments[1].(ast.NamedArgument)
-			Expect(ok).To(Equal(true))
-			Expect(na.Name().Text()).To(Equal("b"))
-			num2, ok := na.Value().(ast.LiteralInt)
-			Expect(ok).To(Equal(true))
-			Expect(num2.Value()).To(Equal(2))
+			Expect(len(arguments)).To(Equal(3))
+			i(arguments[0], 10)
+			nb := na(arguments[1])
+			n(nb.Name(), "b")
+			i(nb.Value(), 2)
+			nc := na(arguments[2])
+			n(nc.Name(), "c")
+			n(nc.Value(), "c")
+		})
+		It("can parse an index", func() {
+			c, ok := parse("a[1]").(ast.Call)
+			Expect(ok).To(BeTrue())
+			s, ok := c.Target().(ast.Selection)
+			Expect(ok).To(BeTrue())
+			n(s.Target(), "a")
+			n(s.Member(), "get")
+			i(c.Arguments()[0], 1)
+		})
+		It("can parse an index assignment", func() {
+			c, ok := parse("a[1] = 2").(ast.Call)
+			Expect(ok).To(BeTrue())
+			s, ok := c.Target().(ast.Selection)
+			Expect(ok).To(BeTrue())
+			n(s.Target(), "a")
+			n(s.Member(), "set")
+			i(c.Arguments()[0], 1)
+			i(c.Arguments()[1], 2)
 		})
 	})
 	Describe("lambda", func() {
@@ -242,6 +408,10 @@ var _ = Describe("parser", func() {
 			expectName(l.Body(), "a")
 			expectWheres(l.TypeParameters(), w("A", "Int"), w("B", "A"))
 		})
+		It("can parse type parameter with a trailing comma", func() {
+			l := lambda("{ A, | a: A -> a }")
+			expectTypeParameters(l.TypeParameters(), tp("A"))
+		})
 	})
 	Describe("statements", func() {
 		It("can parser a loop", func() {
@@ -281,10 +451,10 @@ var _ = Describe("parser", func() {
 			expectNumber(r.Value(), 42)
 		})
 		It("can parse a when expression", func() {
-			w, ok := parse("when (1) { 2 -> { 3 }, 4 -> { 5 }, else -> { 6 } }").(ast.When)
+			w, ok := parse("when (1) { 2 -> { 3 },, 4 -> { 5 }, else -> { 6 }, 7 -> { 8 }, else -> { 9 } }").(ast.When)
 			Expect(ok).To(BeTrue())
 			expectNumber(w.Target(), 1)
-			Expect(len(w.Clauses())).To(Equal(3))
+			Expect(len(w.Clauses())).To(Equal(5))
 			wv, ok := w.Clauses()[0].(ast.WhenValueClause)
 			Expect(ok).To(BeTrue())
 			expectNumber(wv.Value(), 2)
@@ -296,6 +466,103 @@ var _ = Describe("parser", func() {
 			we, ok := w.Clauses()[2].(ast.WhenElseClause)
 			Expect(ok).To(BeTrue())
 			expectNumber(we.Body(), 6)
+			wv, ok = w.Clauses()[3].(ast.WhenValueClause)
+			Expect(ok).To(BeTrue())
+			expectNumber(wv.Value(), 7)
+			expectNumber(wv.Body(), 8)
+			we, ok = w.Clauses()[4].(ast.WhenElseClause)
+			Expect(ok).To(BeTrue())
+			expectNumber(we.Body(), 9)
+		})
+		It("can parse a when with boolean expressions", func() {
+			parse(`...dyego
+                when {
+                  a > b -> { break }
+                }
+            `)
+		})
+	})
+	Describe("types", func() {
+		t := func(text string) ast.Element {
+			v, ok := parse("var a: " + text).(ast.VarDefinition)
+			Expect(ok).To(BeTrue())
+			return v.Type()
+		}
+		Describe("expressions", func() {
+			It("can parse a simple reference", func() {
+				ty := t("A")
+				n(ty, "A")
+			})
+			It("can parse a dotted reference", func() {
+				ty := t("a.B")
+				s, ok := ty.(ast.Selection)
+				Expect(ok).To(BeTrue())
+				n(s.Target(), "a")
+				n(s.Member(), "B")
+			})
+			It("can parse a sequence type referenece", func() {
+				ty := t("A[]")
+				st, ok := ty.(ast.SequenceType)
+				Expect(ok).To(BeTrue())
+				n(st.Elements(), "A")
+			})
+			It("can parse an optional type reference", func() {
+				ty := t("A?")
+				ot, ok := ty.(ast.OptionalType)
+				Expect(ok).To(BeTrue())
+				n(ot.Element(), "A")
+			})
+		})
+		Describe("type literal", func() {
+			tl := func(text string) ast.TypeLiteral {
+				r, ok := t(text).(ast.TypeLiteral)
+				Expect(ok).To(BeTrue())
+				return r
+			}
+			tm := func(e ast.Element) ast.TypeLiteralMember {
+				r, ok := e.(ast.TypeLiteralMember)
+				Expect(ok).To(BeTrue())
+				return r
+			}
+			cm := func(e ast.Element) ast.CallableTypeMember {
+				r, ok := e.(ast.CallableTypeMember)
+				Expect(ok).To(BeTrue())
+				return r
+			}
+			It("can parse an empty type", func() {
+				ty := tl("<>")
+				Expect(len(ty.Members())).To(Equal(0))
+			})
+			It("can parse a type with a member", func() {
+				ty := tl("< a: Int >")
+				m := tm(ty.Members()[0])
+				n(m.Name(), "a")
+				n(m.Type(), "Int")
+			})
+			It("can parse a type with two members", func() {
+				ty := tl("< a: Int, b: Int >")
+				m := tm(ty.Members()[0])
+				n(m.Name(), "a")
+				n(m.Type(), "Int")
+				m = tm(ty.Members()[1])
+				n(m.Name(), "b")
+				n(m.Type(), "Int")
+			})
+			It("can parse a nested type literal", func() {
+				ty := tl("<a: <a: Int>>")
+				m := tm(ty.Members()[0])
+				n(m.Name(), "a")
+				nl := m.Type().(ast.TypeLiteral)
+				m = tm(nl.Members()[0])
+				n(m.Name(), "a")
+				n(m.Type(), "Int")
+			})
+			It("can parse a callable member", func() {
+				ty := tl("< { x: Int, y: Int -> Int } >")
+				c := cm(ty.Members()[0])
+				Expect(len(c.Parameters())).To(Equal(2))
+				n(c.Result(), "Int")
+			})
 		})
 	})
 	Describe("vocabulary", func() {
@@ -374,6 +641,20 @@ var _ = Describe("parser", func() {
 				v := vocab("<| infix operator a left, infix operator b left |>")
 				Expect(len(v.Members())).To(Equal(2))
 			})
+			It("can parse a precedence relation", func() {
+				o := op("infix operator a before infix b left")
+				p := o.Precedence()
+				Expect(p.Relation()).To(Equal(ast.Before))
+				Expect(p.Placement()).To(Equal(ast.Infix))
+				o = op("infix operator a after prefix b right")
+				p = o.Precedence()
+				Expect(p.Relation()).To(Equal(ast.After))
+				Expect(p.Placement()).To(Equal(ast.Prefix))
+				o = op("infix operator a after postfix b right")
+				p = o.Precedence()
+				Expect(p.Relation()).To(Equal(ast.After))
+				Expect(p.Placement()).To(Equal(ast.Postfix))
+			})
 		})
 	})
 	e := func(source string) ast.Element {
@@ -382,36 +663,31 @@ var _ = Describe("parser", func() {
 		sequence := element.(ast.Sequence)
 		return sequence.Right()
 	}
+	expectName := func(n ast.Element, name string) {
+		nameElement, ok := n.(ast.Name)
+		Expect(ok).To(BeTrue())
+		Expect(nameElement.Text()).To(Equal(name))
+	}
+	expectOp := func(e ast.Element) (ast.Element, ast.Element, []ast.Element) {
+		call, ok := e.(ast.Call)
+		Expect(ok).To(BeTrue())
+		selection, ok := call.Target().(ast.Selection)
+		Expect(ok).To(BeTrue())
+		return selection.Member(), selection.Target(), call.Arguments()
+	}
+	expectUnaryOp := func(e ast.Element, name string) ast.Element {
+		member, target, arguments := expectOp(e)
+		expectName(member, name)
+		Expect(len(arguments)).To(Equal(0))
+		return target
+	}
+	expectBinaryOp := func(e ast.Element, name string) (ast.Element, ast.Element) {
+		member, target, arguments := expectOp(e)
+		expectName(member, name)
+		Expect(len(arguments)).To(Equal(1))
+		return target, arguments[0]
+	}
 	Describe("prefix expressions", func() {
-		expectName := func(n ast.Element, name string) {
-			nameElement, ok := n.(ast.Name)
-			Expect(ok).To(BeTrue())
-			Expect(nameElement.Text()).To(Equal(name))
-		}
-		i := func(n ast.Element, value int) {
-			v, ok := n.(ast.LiteralInt)
-			Expect(ok).To(BeTrue())
-			Expect(v.Value()).To(Equal(value))
-		}
-		expectOp := func(e ast.Element) (ast.Element, ast.Element, []ast.Element) {
-			call, ok := e.(ast.Call)
-			Expect(ok).To(BeTrue())
-			selection, ok := call.Target().(ast.Selection)
-			Expect(ok).To(BeTrue())
-			return selection.Member(), selection.Target(), call.Arguments()
-		}
-		expectUnaryOp := func(e ast.Element, name string) ast.Element {
-			member, target, arguments := expectOp(e)
-			expectName(member, name)
-			Expect(len(arguments)).To(Equal(0))
-			return target
-		}
-		expectBinaryOp := func(e ast.Element, name string) (ast.Element, ast.Element) {
-			member, target, arguments := expectOp(e)
-			expectName(member, name)
-			Expect(len(arguments)).To(Equal(1))
-			return target, arguments[0]
-		}
 		It("can parse a prefix expression", func() {
 			v := e("+1")
 			t := expectUnaryOp(v, "+")
@@ -443,6 +719,132 @@ var _ = Describe("parser", func() {
 			v := e("++ ++ 1 ++ ++")
 			expectUnaryOp(expectUnaryOp(expectUnaryOp(expectUnaryOp(v, "++"), "++"), "postfix ++"), "postfix ++")
 		})
+		It("can parse an local identifier operator", func() {
+			v := e("this dot this")
+			l, r := expectBinaryOp(v, "dot")
+			n(l, "this")
+			n(r, "this")
+		})
+		It("can handle an assignment", func() {
+			e(`
+                when {
+                    ret.hit -> {
+                        hitSphere = obj
+                        isHit = true
+                        tval = hit.tval
+                    }
+                }
+            `)
+		})
+	})
+	Describe("separators", func() {
+		sequence := func(e ast.Element) []ast.Element {
+			var result []ast.Element
+			s, ok := e.(ast.Sequence)
+			for ok {
+				l := s.Left()
+				result = append(result, l)
+				e = s.Right()
+				s, ok = e.(ast.Sequence)
+			}
+			result = append(result, e)
+			return result
+		}
+		s := func(text string) []ast.Element {
+			e := parse(text)
+			return sequence(e)
+		}
+		ns := func(e []ast.Element, names ...string) {
+			Expect(len(e)).To(Equal(len(names)))
+			for i, name := range names {
+				n(e[i], name)
+			}
+		}
+		It("new lines can imply sperators", func() {
+			ns(s("a \n b"), "a", "b")
+		})
+		It("operator before a nl prevents implied separater", func() {
+			seq := s("...dyego \n  a + \n b")
+			Expect(len(seq)).To(Equal(2))
+		})
+		It("operator after a nl prevents implied separater", func() {
+			seq := s("...dyego, a \n + b")
+			Expect(len(seq)).To(Equal(2))
+		})
+	})
+	Describe("locals", func() {
+		dec := func(text string) ast.VarDefinition {
+			v, ok := parse(text).(ast.VarDefinition)
+			Expect(ok).To(BeTrue())
+			return v
+		}
+		It("can parse a simple val", func() {
+			v := dec("val a = 1")
+			n(v.Name(), "a")
+			i(v.Value(), 1)
+			Expect(v.Type()).To(BeNil())
+			Expect(v.Mutable()).To(BeFalse())
+		})
+		It("can parse a simple typed val", func() {
+			v := dec("val a: Int = 1")
+			n(v.Name(), "a")
+			i(v.Value(), 1)
+			n(v.Type(), "Int")
+			Expect(v.Mutable()).To(BeFalse())
+		})
+		It("can parse a simple var", func() {
+			v := dec("var a = 1")
+			n(v.Name(), "a")
+			i(v.Value(), 1)
+			Expect(v.Type()).To(BeNil())
+			Expect(v.Mutable()).To(BeTrue())
+		})
+		It("can parse a simple typed var", func() {
+			v := dec("var a: Int = 1")
+			n(v.Name(), "a")
+			i(v.Value(), 1)
+			n(v.Type(), "Int")
+			Expect(v.Mutable()).To(BeTrue())
+		})
+		It("can parse an late initialized var", func() {
+			v := dec("var a")
+			n(v.Name(), "a")
+			Expect(v.Value()).To(BeNil())
+			Expect(v.Type()).To(BeNil())
+			Expect(v.Mutable()).To(BeTrue())
+		})
+	})
+	Describe("errors", func() {
+		It("reports invalid vocabulary references", func() {
+			expectErrors("...missing", "Expected a vocabulary reference")
+		})
+		It("reports an invalid expression", func() {
+			expectErrors("(val a)", "Expected one of")
+		})
+		It("reports an invalid vocabulary member", func() {
+			expectErrors("let a = <| invalid operator |>", "Expected one of infix")
+		})
+		It("reports an invalid let", func() {
+			expectErrors("let a = <!", "Expected one of <|")
+			expectErrors("let a = else", "Expected one of <|")
+		})
+		It("reports an invalid parameter", func() {
+			expectErrors("...dyego, a(a: 1 + 2 + var)", "received var")
+		})
+		It("reports an invalid sequence", func() {
+			expectErrors(".", "received .")
+		})
+		It("reports an undefined operator", func() {
+			expectErrors("&&& b", "Symbol '&&&'")
+		})
+		It("reports an invalid call", func() {
+			expectErrors("a(:1)", "Expected <identifier>")
+		})
+	})
+	Describe("examples", func() {
+		It("can parse the simple example", func() {
+			parseFile("../examples/Simple.dg")
+		})
 	})
 })
 
@@ -458,6 +860,7 @@ let dyego = <|
   infix operator (@*@, @/@, @%@) left,
   infix operator (@+@, @-@) left,
   infix operator @..@ left,
+  infix operator identifiers left,
   infix operator @?:@ left,
   infix operator (@in@, @!in@, @is@, @!is@) left,
   infix operator (@<@, @>@, @>=@, @<=@) left,
@@ -474,7 +877,7 @@ func lineMapOf(source string) []int {
 			result = append(result, i+1)
 		}
 	}
-	return append(result, len(source))
+	return append(result, len(source)+1)
 }
 
 func lineColumnOf(lineMap []int, offset int) (int, int) {
@@ -513,9 +916,9 @@ func printErrors(errors []ast.Error, source string) {
 			if lineLength-col < errorLen {
 				errorLen = lineLength - col
 			}
-			println(err.Message())
+			println(fmt.Sprintf("%d:%d: %s", line, col, err.Message()))
 			if line < len(lineMap) {
-				println(source[lineMap[line-1]:lineMap[line]])
+				println(source[lineMap[line-1] : lineMap[line]-1])
 			}
 			println(fmt.Sprintf("%s%s", strings.Repeat(" ", col-1), strings.Repeat("^", errorLen)))
 		}
@@ -545,6 +948,21 @@ func parse(text string) ast.Element {
 	return r
 }
 
+func expectErrors(text string, errors ...string) {
+	p := NewParser(scan(text), defaultScope)
+	p.Parse()
+loop:
+	for _, message := range errors {
+		for _, err := range p.Errors() {
+			if strings.Contains(err.Message(), message) {
+				continue loop
+			}
+		}
+		printErrors(p.Errors(), text)
+		Fail(fmt.Sprintf("Expected '%s' to be included as an error", message))
+	}
+}
+
 func expectNumber(element ast.Element, value int) {
 	n, ok := element.(ast.LiteralInt)
 	Expect(ok).To(Equal(true))
@@ -555,6 +973,16 @@ func expectName(element ast.Element, value string) {
 	l, ok := element.(ast.Name)
 	Expect(ok).To(Equal(true))
 	Expect(l.Text()).To(Equal(value))
+}
+
+func readFile(name string) []byte {
+	src, err := ioutil.ReadFile(name)
+	Expect(err).To(BeNil())
+	return append(src, 0)
+}
+
+func parseFile(name string) ast.Element {
+	return parse(string(readFile(name)))
 }
 
 func TestErrors(t *testing.T) {

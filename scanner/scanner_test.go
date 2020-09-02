@@ -47,6 +47,9 @@ func parsePseudoBytes(t *testing.T, src []byte, expectedToken tokens.Token, expe
 		if pseudoToken != received {
 			t.Errorf("Expected '%s', received '%s'", pseudoToken.String(), received.String())
 		}
+		if pseudoToken != tokens.InvalidPseudoToken && pseudoToken.String() != scanner.Value() {
+			t.Errorf("Expected pseudoToken text to match string text %s, %v", pseudoToken, scanner.Value())
+		}
 	}
 	if scanner.Next() != tokens.EOF {
 		t.Error("Not enough tokens")
@@ -101,19 +104,19 @@ func TestIdentifer(t *testing.T) {
 }
 
 func TestReservedSymbols(t *testing.T) {
-	parseString(t, "{}()[];: ,.::<||>",
+	parseString(t, "{}()[];: ,.::<||>[!!]",
 		tokens.LBrace, tokens.RBrace, tokens.LParen, tokens.RParen, tokens.LBrack, tokens.RBrack,
 		tokens.Semi, tokens.Colon, tokens.Comma, tokens.Dot, tokens.Scope, tokens.VocabularyStart,
-		tokens.VocabularyEnd,
+		tokens.VocabularyEnd, tokens.LBrackBang, tokens.BangRBrack,
 	)
 }
 
 func TestPseudoSymbols(t *testing.T) {
-	parsePseudo(t, "+ | - * / % ! && || > >= = == != < <= -> .. ...", tokens.Symbol,
-		tokens.Add, tokens.Bar, tokens.Sub, tokens.Mult, tokens.Div, tokens.Rem, tokens.Not,
+	parsePseudo(t, "+ & | - * / % ! && || > >= = == != < <= ? -> .. ...", tokens.Symbol,
+		tokens.Add, tokens.And, tokens.Bar, tokens.Sub, tokens.Mult, tokens.Div, tokens.Rem, tokens.Not,
 		tokens.LogicalAnd, tokens.LogicalOr, tokens.GreaterThan, tokens.GreaterThanEqual,
 		tokens.Equal, tokens.DoubleEqual, tokens.NotEqual, tokens.LessThan, tokens.LessThanEqual,
-		tokens.Arrow, tokens.Range, tokens.Spread,
+		tokens.Question, tokens.Arrow, tokens.Range, tokens.Spread,
 	)
 }
 
@@ -156,8 +159,8 @@ func TestPseudoReservedSymbols(t *testing.T) {
 
 func TestPseudoWords(t *testing.T) {
 	testPseudoWord(t,
-		tokens.After, tokens.Before, tokens.Break, tokens.Continue, tokens.Else, tokens.Infix, tokens.Left, tokens.Loop,
-		tokens.Operator, tokens.Postfix, tokens.Prefix, tokens.Right, tokens.When, tokens.Where,
+		tokens.After, tokens.Before, tokens.Break, tokens.Continue, tokens.Else, tokens.Infix, tokens.Identifiers,
+		tokens.Left, tokens.Loop, tokens.Operator, tokens.Postfix, tokens.Prefix, tokens.Right, tokens.When, tokens.Where,
 	)
 }
 

@@ -7,6 +7,8 @@ import (
 	"dyego0/ast"
 )
 
+const infixTypeMember = "infix type member"
+
 type any interface{}
 
 // precedenceLevel
@@ -455,6 +457,13 @@ func buildVocabulary(scope vocabularyScope, vocabularyLiteral ast.VocabularyLite
 			}
 
 			for _, name := range m.Names() {
+				if name.Text() == infixTypeMember && placement != ast.Infix {
+					c.reportError(
+						precedenceDeclaration,
+						"Local type identifiers can only be declaried as an infix operator",
+					)
+					continue
+				}
 				levels, associativities := levelsAndAssociativities(placement, precedence, associativity)
 				c.recordOperator(name, name.Text(), levels, associativities)
 			}
