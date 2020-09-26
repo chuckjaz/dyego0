@@ -104,10 +104,11 @@ func TestIdentifer(t *testing.T) {
 }
 
 func TestReservedSymbols(t *testing.T) {
-	parseString(t, "{}()[];: ,.::<||>[!!]",
+	parseString(t, "{}()[];: ,.::<||>[!!]{!!}",
 		tokens.LBrace, tokens.RBrace, tokens.LParen, tokens.RParen, tokens.LBrack, tokens.RBrack,
 		tokens.Semi, tokens.Colon, tokens.Comma, tokens.Dot, tokens.Scope, tokens.VocabularyStart,
-		tokens.VocabularyEnd, tokens.LBrackBang, tokens.BangRBrack,
+		tokens.VocabularyEnd, tokens.LBrackBang, tokens.BangRBrack, tokens.LBraceBang,
+		tokens.BangRBrace,
 	)
 }
 
@@ -233,7 +234,7 @@ func TestULInt(t *testing.T) {
 }
 
 func TestByte(t *testing.T) {
-	scanner, token := scanOne(" 10b ")
+	scanner, token := scanOne(" 10ub ")
 	if token != tokens.LiteralByte {
 		t.Error("Expected integer byte")
 	}
@@ -260,6 +261,28 @@ func TestDouble(t *testing.T) {
 	if scanner.Value().(float64) != 10.1 {
 		t.Error("Expected 10.1")
 	}
+}
+
+func expectOne(t *testing.T, text string, expectedToken tokens.Token, expectedValue interface{}) {
+	scanner, token := scanOne(text)
+	if token != expectedToken {
+		t.Errorf("Incorrect token in '%s', expected %s, received %s", text, expectedToken, token)
+		if token == tokens.Invalid {
+			t.Errorf(" message = %s", scanner.Message())
+		}
+	}
+	if scanner.Value() != expectedValue {
+		t.Errorf("Incorrect value in '%s', expected %#v, received %#v", text, expectedValue, scanner.Value())
+	}
+}
+
+func TestHex(t *testing.T) {
+	expectOne(t, " 0xABub ", tokens.LiteralByte, byte(0xAB))
+	expectOne(t, " 0xABCD ", tokens.LiteralInt, int32(0xABCD))
+	expectOne(t, " 0xABCDi ", tokens.LiteralInt, int32(0xABCD))
+	expectOne(t, " 0xABCDu ", tokens.LiteralUInt, uint32(0xABCD))
+	expectOne(t, " 0x1234567890ABCDl ", tokens.LiteralLong, int64(0x1234567890ABCD))
+	expectOne(t, " 0x1234567890ABCDul ", tokens.LiteralULong, uint64(0x1234567890ABCD))
 }
 
 func TestString(t *testing.T) {

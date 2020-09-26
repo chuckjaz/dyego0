@@ -39,7 +39,7 @@ var _ = Describe("parser", func() {
 			Expect(l.Value()).To(Equal('a'))
 		})
 		It("can parse a byte", func() {
-			l, ok := parse("42b").(ast.LiteralByte)
+			l, ok := parse("42ub").(ast.LiteralByte)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(byte(42)))
 		})
@@ -844,6 +844,12 @@ var _ = Describe("parser", func() {
 	Describe("examples", func() {
 		It("can parse the simple example", func() {
 			parseFile("../examples/Simple.dg")
+		})
+		It("can parse Wasm_wasm.dg", func() {
+			parseFile("../builtins/Wasm_wasm.dg")
+		})
+		It("can parse Dyego0_wasm.dg", func() {
+			parseFile("../builtins/Dyego0_wasm.dg")
 		})
 	})
 })
