@@ -67,6 +67,12 @@ const (
 	// RBrace '}'
 	RBrace
 
+	// LBraceBang '{!'
+	LBraceBang
+
+	// BangRBrace '!}'
+	BangRBrace
+
 	// Semi ';'
 	Semi
 
@@ -135,6 +141,8 @@ var tokens = [...]string{
 	BangRBrack:      "!]",
 	LBrace:          "{",
 	RBrace:          "}",
+	LBraceBang:      "{!",
+	BangRBrace:      "!}",
 	Semi:            ";",
 	Colon:           ":",
 	Comma:           ",",

@@ -111,10 +111,12 @@ var _ = Describe("ast", func() {
 			Expect(s(n)).To(Equal("Spread(Location(0-1), target: nil)"))
 		})
 		It("Call", func() {
-			l := b.Call(nil, nil)
+			var args []ast.Element
+			args = append(args, b.LiteralInt(1), b.LiteralInt(2))
+			l := b.Call(nil, args)
 			Expect(l.Target()).To(BeNil())
-			Expect(l.Arguments()).To(BeNil())
-			Expect(s(l)).To(Equal("Call(Location(0-1), target: nil, arguments: [])"))
+			Expect(l.Arguments()).To(Equal(args))
+			Expect(s(l)).To(Equal("Call(Location(0-1), target: nil, arguments: [LiteralInt(Location(0-1), 1), LiteralInt(Location(0-1), 2)])"))
 		})
 		It("NamedArgument", func() {
 			l := b.NamedArgument(nil, nil)
@@ -158,6 +160,15 @@ var _ = Describe("ast", func() {
 			Expect(l.Parameters()).To(BeNil())
 			Expect(l.Body()).To(BeNil())
 			Expect(s(l)).To(Equal("Lambda(Location(0-1), typeParameters: nil, parameters: [], body: nil)"))
+		})
+		It("IntrinsicLambda", func() {
+			l := b.IntrinsicLambda(nil, nil, nil, nil)
+			Expect(l.TypeParameters()).To(BeNil())
+			Expect(l.Parameters()).To(BeNil())
+			Expect(l.Body()).To(BeNil())
+			Expect(l.Result()).To(BeNil())
+			Expect(l.IsIntrinsicLambda()).To(BeTrue())
+			Expect(s(l)).To(Equal("IntrinsicLambda(Location(0-1), typeParameters: nil, parameters: [], body: nil, result: nil)"))
 		})
 		It("Loop", func() {
 			l := b.Loop(nil, nil)
@@ -241,6 +252,13 @@ var _ = Describe("ast", func() {
 			Expect(t.IsTypeLiteral()).To(BeTrue())
 			Expect(s(t)).To(Equal("TypeLiteral(Location(0-1), members: [])"))
 		})
+		It("TypeLiteralConstant", func() {
+			t := b.TypeLiteralConstant(nil, nil)
+			Expect(t.Name()).To(BeNil())
+			Expect(t.Value()).To(BeNil())
+			Expect(t.IsTypeLiteralConstant()).To(BeTrue())
+			Expect(s(t)).To(Equal("TypeLiteralConstant(Location(0-1), name: nil, value: nil)"))
+		})
 		It("TypeLiteralMember", func() {
 			m := b.TypeLiteralMember(nil, nil)
 			Expect(m.Name()).To(BeNil())
@@ -273,13 +291,15 @@ var _ = Describe("ast", func() {
 			Expect(s(l)).To(Equal("VocabularyLiteral(Location(0-1), members: [])"))
 		})
 		It("VocabularyOperatorDeclaration", func() {
-			l := b.VocabularyOperatorDeclaration(nil, ast.Infix, nil, ast.Left)
-			Expect(l.Names()).To(BeNil())
+			var names []ast.Name
+			names = append(names, b.Name("a"), b.Name("b"))
+			l := b.VocabularyOperatorDeclaration(names, ast.Infix, nil, ast.Left)
+			Expect(l.Names()).To(Equal(names))
 			Expect(l.Placement()).To(Equal(ast.Infix))
 			Expect(l.Precedence()).To(BeNil())
 			Expect(l.Associativity()).To(Equal(ast.Left))
 			Expect(s(l)).To(
-				Equal("VocabularyOperatorDeclaration(Location(0-1), names: [], placement: infix, precedence: nil, associativity: left)"),
+				Equal("VocabularyOperatorDeclaration(Location(0-1), names: [Name(Location(0-1), a), Name(Location(0-1), b)], placement: infix, precedence: nil, associativity: left)"),
 			)
 		})
 		It("VocabularyOperatorPrecedence", func() {

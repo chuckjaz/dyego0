@@ -1,9 +1,11 @@
 package scanner
 
 import (
-	"dyego0/tokens"
+	"fmt"
 	"go/token"
 	"strconv"
+
+	"dyego0/tokens"
 )
 
 const (
@@ -239,12 +241,15 @@ loop:
 						break loop
 					}
 				case ']':
-					if !symbolExtender(src[offset+1]) {
-						offset++
-						result = tokens.BangRBrack
-						s.value = "!]"
-						break loop
-					}
+					offset++
+					result = tokens.BangRBrack
+					s.value = "!]"
+					break loop
+				case '}':
+					offset++
+					result = tokens.BangRBrace
+					s.value = "!}"
+					break loop
 				default:
 					if !symbolExtender(src[offset]) {
 						result = tokens.Symbol
@@ -355,25 +360,40 @@ loop:
 			result = tokens.Symbol
 		case ',':
 			result = tokens.Comma
+			s.value = ","
 		case ';':
 			result = tokens.Semi
+			s.value = ";"
 		case '{':
-			result = tokens.LBrace
+			if src[offset] == '!' {
+				offset++
+				result = tokens.LBraceBang
+				s.value = "{!"
+			} else {
+				result = tokens.LBrace
+				s.value = "{"
+			}
 		case '}':
 			result = tokens.RBrace
+			s.value = "}"
 		case '[':
 			if src[offset] == '!' {
 				offset++
 				result = tokens.LBrackBang
+				s.value = "[!"
 			} else {
 				result = tokens.LBrack
+				s.value = "["
 			}
 		case ']':
 			result = tokens.RBrack
+			s.value = "]"
 		case '(':
 			result = tokens.LParen
+			s.value = "("
 		case ')':
 			result = tokens.RParen
+			s.value = ")"
 		case '.':
 			if src[offset] == '.' {
 				if src[offset+1] == '.' {
@@ -389,6 +409,7 @@ loop:
 				}
 			} else {
 				result = tokens.Dot
+				s.value = "."
 			}
 
 		// Pseudo reserved words and identifiers
@@ -672,7 +693,82 @@ loop:
 			}
 			s.value = string(src[start:offset])
 			result = tokens.Identifier
-		case '0', '1', '2', '3', '4',
+		case '0':
+			if src[offset] == 'x' {
+				offset++
+				first := offset
+				var value uint64
+			hexLoop:
+				for {
+					last := offset
+					b = src[offset]
+					offset++
+					switch b {
+					default:
+						offset = last
+						break hexLoop
+					case '0', '1', '2', '3', '4',
+						'5', '6', '7', '8', '9':
+						value = value*16 + (uint64(b) - uint64('0'))
+						continue
+					case 'A', 'B', 'C', 'D', 'E', 'F':
+						value = value*16 + 10 + (uint64(b) - uint64('A'))
+						continue
+					case 'a', 'b', 'c', 'd', 'e', 'f':
+						value = value*16 + 10 + (uint64(b) - uint64('a'))
+						continue
+					case '_':
+						continue
+					}
+				}
+				if first == offset {
+					result = tokens.Invalid
+					s.msg = "Invalid hex format"
+				} else {
+					b = src[offset]
+					switch b {
+					case 'u':
+						offset++
+						b = src[offset]
+						switch b {
+						default:
+							result = tokens.LiteralUInt
+							s.value = uint32(value)
+						case 'b':
+							offset++
+							result = tokens.LiteralByte
+							s.value = byte(value)
+						case 'l':
+							offset++
+							result = tokens.LiteralULong
+							s.value = uint64(value)
+						}
+					case 'l':
+						offset++
+						result = tokens.LiteralLong
+						s.value = int64(value)
+					case 'i':
+						offset++
+						fallthrough
+					default:
+						result = tokens.LiteralInt
+						s.value = int32(value)
+					}
+				}
+				switch src[offset] {
+				case 'a', 'b', 'c', 'd', 'e',
+					'f', 'g', 'h', 'i', 'j',
+					'k', 'l', 'm', 'n', 'o',
+					'p', 'q', 'r', 's', 't',
+					'u', 'v', 'w', 'x', 'y',
+					'z':
+					result = tokens.Invalid
+					s.msg = fmt.Sprintf("Extra character '%c' after literal", rune(src[offset]))
+				}
+				break loop
+			}
+			fallthrough
+		case '1', '2', '3', '4',
 			'5', '6', '7', '8', '9':
 			value := uint64(int(b) - int('0'))
 			isFloat := false
@@ -701,10 +797,6 @@ loop:
 			if !isFloat {
 				b = src[offset]
 				switch b {
-				case 'b':
-					offset++
-					result = tokens.LiteralByte
-					s.value = byte(value)
 				case 'u':
 					offset++
 					b = src[offset]
@@ -712,6 +804,10 @@ loop:
 					default:
 						result = tokens.LiteralUInt
 						s.value = uint(value)
+					case 'b':
+						offset++
+						result = tokens.LiteralByte
+						s.value = byte(value)
 					case 'l':
 						offset++
 						result = tokens.LiteralULong

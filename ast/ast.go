@@ -186,6 +186,16 @@ type Lambda interface {
 	Body() Element
 }
 
+// IntrinsicLambda is that specifies instructions
+type IntrinsicLambda interface {
+	Element
+	TypeParameters() TypeParameters
+	Parameters() []Parameter
+	Body() Element
+	Result() Element
+	IsIntrinsicLambda() bool
+}
+
 // Loop is a loop statement
 type Loop interface {
 	Element
@@ -286,6 +296,14 @@ type TypeLiteralMember interface {
 	Name() Name
 	Type() Element
 	IsTypeLiteralMember() bool
+}
+
+// TypeLiteralConstant is a type literal constant
+type TypeLiteralConstant interface {
+	Element
+	Name() Name
+	Value() Element
+	IsTypeLiteralConstant() bool
 }
 
 // CallableTypeMember is a callable type literal member
@@ -452,6 +470,7 @@ type Builder interface {
 	NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer
 	SpreadMemberInitializer(target Element) SpreadMemberInitializer
 	Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda
+	IntrinsicLambda(typeParameters TypeParameters, parameters []Parameter, body Element, result Element) IntrinsicLambda
 	Loop(label Name, body Element) Loop
 	Return(value Element) Return
 	TypeParameters(parameters []TypeParameter, wheres []Where) TypeParameters
@@ -464,6 +483,7 @@ type Builder interface {
 	VarDefinition(name Name, typ Element, value Element, mutable bool) VarDefinition
 	LetDefinition(name Element, value Element) LetDefinition
 	TypeLiteral(members []Element) TypeLiteral
+	TypeLiteralConstant(name Name, value Element) TypeLiteralConstant
 	TypeLiteralMember(name Name, typ Element) TypeLiteralMember
 	CallableTypeMember(parameters []Element, result Element) CallableTypeMember
 	SequenceType(elements Element) SequenceType
@@ -862,6 +882,7 @@ func elementsToString(elements []Element) string {
 		if !first {
 			result += ", "
 		}
+		first = false
 		result += fmt.Sprintf("%s", element)
 	}
 	result += "]"
@@ -1054,6 +1075,43 @@ func (l *lambdaImpl) String() string {
 
 func (b *builderImpl) Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda {
 	return &lambdaImpl{Location: b.Loc(), typeParameters: typeParameters, parameters: parameters, body: body}
+}
+
+type intrinsicLambdaImpl struct {
+	Location
+	typeParameters TypeParameters
+	parameters     []Parameter
+	body           Element
+	result         Element
+}
+
+func (l *intrinsicLambdaImpl) TypeParameters() TypeParameters {
+	return l.typeParameters
+}
+
+func (l *intrinsicLambdaImpl) Parameters() []Parameter {
+	return l.parameters
+}
+
+func (l *intrinsicLambdaImpl) Body() Element {
+	return l.body
+}
+
+func (l *intrinsicLambdaImpl) Result() Element {
+	return l.result
+}
+
+func (l *intrinsicLambdaImpl) IsIntrinsicLambda() bool {
+	return true
+}
+
+func (l *intrinsicLambdaImpl) String() string {
+	return fmt.Sprintf("IntrinsicLambda(%s, typeParameters: %s, parameters: %s, body: %s, result: %s)", l.Location, s(l.typeParameters),
+		parametersToString(l.parameters), s(l.body), s(l.result))
+}
+
+func (b *builderImpl) IntrinsicLambda(typeParameters TypeParameters, parameters []Parameter, body Element, result Element) IntrinsicLambda {
+	return &intrinsicLambdaImpl{Location: b.Loc(), typeParameters: typeParameters, parameters: parameters, body: body, result: result}
 }
 
 type loopImpl struct {
@@ -1379,6 +1437,32 @@ func (t *typeLiteralImpl) String() string {
 
 func (b *builderImpl) TypeLiteral(members []Element) TypeLiteral {
 	return &typeLiteralImpl{Location: b.Loc(), members: members}
+}
+
+type typeLiteralConstantImpl struct {
+	Location
+	name  Name
+	value Element
+}
+
+func (t *typeLiteralConstantImpl) Name() Name {
+	return t.name
+}
+
+func (t *typeLiteralConstantImpl) Value() Element {
+	return t.value
+}
+
+func (t *typeLiteralConstantImpl) IsTypeLiteralConstant() bool {
+	return true
+}
+
+func (t *typeLiteralConstantImpl) String() string {
+	return fmt.Sprintf("TypeLiteralConstant(%s, name: %s, value: %s)", t.Location, s(t.name), s(t.value))
+}
+
+func (b *builderImpl) TypeLiteralConstant(name Name, value Element) TypeLiteralConstant {
+	return &typeLiteralConstantImpl{Location: b.Loc(), name: name, value: value}
 }
 
 type typeLiteralMemberImpl struct {

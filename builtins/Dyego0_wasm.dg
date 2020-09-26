@@ -1,0 +1,157 @@
+//...Wasm
+
+...<|
+  postfix operator (`++`, `--`, `?.`, `?`) right,
+  prefix operator (`+`, `-`, `--`, `++`) right,
+  infix operator (`as`, `as?`) left,
+  infix operator (`*`, `/`, `%`) left,
+  infix operator (`+`, `-`) left,
+  infix operator `..` left,
+  infix operator identifiers left,
+  infix operator `?:` left,
+  infix operator (`in`, `!in`, `is`, `!is`) left,
+  infix operator (`<`, `>`, `>=`, `<=`) left,
+  infix operator (`==`, `!=`) left,
+  infix operator `&&` left,
+  infix operator `||` left,
+  infix operator (`=`, `+=`, `*=`, `/=`, `%=`) right
+|>
+
+let Boolean = <
+  `@fmt` = valtype.i32
+  `@size` = 1
+  `@load.global` = inst.i32.load8_s
+  `@store.global` = inst.i32.store8
+
+  `==` = {! other: Boolean -> inst.i32.eq !}: Boolean
+  `!=` = {! other: Boolean -> inst.i32.ne !}: Boolean
+  `!` = {! -> inst.const, 0ub, inst.i32.eq !}: Boolean
+>
+
+let Byte = <
+  `@fmt` = valtype.i32
+  `@size` = 1
+  `@load.global` = inst.i32.load8_u
+  `@store.global` = inst.i32.store8
+
+  `+` = {! other: Byte -> inst.i32.add !}: Byte
+  `-` = {! other: Byte -> inst.i32.sub !}: Byte
+  `*` = {! other: Byte -> inst.i32.mul !}: Byte
+  `/` = {! other: Byte -> inst.i32.div_u !}: Byte
+  `%` = {! other: Byte -> inst.i32.rem_u !}: Byte
+  `&` = {! other: Byte -> inst.i32.and !}: Byte
+  `|` = {! other: Byte -> inst.i32.or !}: Byte
+  `^` = {! other: Byte -> inst.i32.xor !}: Byte
+  `>` = {! other: Byte -> inst.i32.gt_u !}: Boolean
+  `<` = {! other: Byte -> inst.i32.lt_u !}: Boolean
+  `>=` = {! other: Byte -> inst.i32.ge !}: Boolean
+  `<=` = {! other: Byte -> inst.i32.le !}: Boolean
+  `==` = {! other: Byte -> inst.i32.eq !}: Boolean
+  `!=` = {! other: Byte -> inst.i32.ne !}: Boolean
+  shl = {! other: Byte -> inst.i32.shl_s !}: Byte
+  shr = {! other: Byte -> inst.i32.shr !}: Byte
+  rotl = {! other: Byte -> inst.i32.rotl !}: Byte
+  rotr = {! other: Byte -> inst.i32.rotl !}: Byte
+  CountLeadingZeros = {! -> inst.i32.clz !}: Byte
+  CountTrailingZeros = {! -> inst.i32.ctz !}: Byte
+  CountOnes = {! -> inst.i32.popcnt !}: Byte
+  IsZero = {! -> inst.i32.ieqz !}: Byte
+>
+
+let Int = <
+  `@fmt` = valtype.i32
+  `@size` = 4
+  `@load.global` = inst.i32.load
+  `@store.global` = inst.i32.store
+
+  `+` = {! other: Int -> inst.i32.add !}: Int
+  `-` = {! other: Int -> inst.i32.sub !}: Int
+  `*` = {! other: Int -> inst.i32.mul !}: Int
+  `/` = {! other: Int -> inst.i32.div_s !}: Int
+  `%` = {! other: Int -> inst.i32.rem_s !}: Int
+  `&` = {! other: Int -> inst.i32.and !}: Int
+  `|` = {! other: Int -> inst.i32.or !}: Int
+  `^` = {! other: Int -> inst.i32.xor !}: Int
+  `>` = {! other: Int -> inst.i32.gt_s !}: Boolean
+  `<` = {! other: Int -> inst.i32.lt_s !}: Boolean
+  `>=` = {! other: Int -> inst.i32.ge !}: Boolean
+  `<=` = {! other: Int -> inst.i32.le !}: Boolean
+  `==` = {! other: Int -> inst.i32.eq !}: Boolean
+  `!=` = {! other: Int -> inst.i32.ne !}: Boolean
+  shl = {! other: Int -> inst.i32.shl_s !}: Int
+  shr = {! other: Int -> inst.i32.shr !}: Int
+  rotl = {! other: Int -> inst.i32.rotl !}: Int
+  rotr = {! other: Int -> inst.i32.rotl !}: Int
+  CountLeadingZeros = {! -> inst.i32.clz !}: Int
+  CountTrailingZeros = {! -> inst.i32.ctz !}: Int
+  CountOnes = {! -> inst.i32.popcnt !}: Int
+  IsZero = {! -> inst.i32.ieqz !}: Int
+>
+
+let Long = <
+  `@fmt` = valtype.i64
+  `@size` = 8
+  `@load.global` = inst.i64.load
+
+  `+` = {! other: Long -> inst.i64.add !}: Long
+  `-` = {! other: Long -> inst.i64.sub !}: Long
+  `*` = {! other: Long -> inst.i64.mul !}: Long
+  `/` = {! other: Long -> inst.i64.div_s !}: Long
+  `%` = {! other: Long -> inst.i64.rem_s !}: Long
+  `&` = {! other: Long -> inst.i64.and !}: Long
+  `|` = {! other: Long -> inst.i64.or !}: Long
+  `^` = {! other: Long -> inst.i64.xor !}: Long
+  `>` = {! other: Long -> inst.i64.gt !}: Boolean
+  `<` = {! other: Long -> inst.i64.lt !}: Boolean
+  `>=` = {! other: Long -> inst.i64.ge_s !}: Boolean
+  `<=` = {! other: Long -> inst.i64.le_s !}: Boolean
+  `==` = {! other: Long -> inst.i64.eq !}: Boolean
+  `!=` = {! other: Long -> inst.i64.ne !}: Boolean
+  shl = {! other: Long -> inst.i64.shl_s !}: Long
+  shr = {! other: Long -> inst.i64.shr !}: Long
+  rotl = {! other: Long -> inst.i64.rotl !}: Long
+  rotr = {! other: Long -> inst.i64.rotl !}: Long
+  CountLeadingZeros = {! -> inst.i64.clz !}: Long
+  CountTrailingZeros = {! -> inst.i64.ctz !}: Long
+  CountOnes = {! -> inst.i64.popcnt !}: Long
+  IsZero = {! -> inst.i64.ieqz !}: Long
+>
+
+let Float = <
+  `@fmt` = valtype.f32
+  `@size` = 4
+  `@load.global` = inst.f32.load
+
+  `+` = {! other: Float -> inst.f32.add !}: Float
+  `-` = {! other: Float -> inst.f32.sub !}: Float
+  `*` = {! other: Float -> inst.f32.mul !}: Float
+  `/` = {! other: Float -> inst.f32.div !}: Float
+  `>` = {! other: Float -> inst.f32.gt !}: Boolean
+  `<` = {! other: Float -> inst.f32.lt !}: Boolean
+  `>=` = {! other: Float -> inst.f32.ge !}: Boolean
+  `<=` = {! other: Float -> inst.f32.le !}: Boolean
+  `==` = {! other: Float -> inst.f32.eq !}: Boolean
+  `!=` = {! other: Float -> inst.f32.ne !}: Boolean
+  Min = {! other: Float -> inst.f32.min !}: Float
+  Max = {! other: Float -> inst.f32.max !}: Float
+>
+
+let Double = <
+  `@fmt` = valtype.f64
+  `@size` = 8
+  `@load.global` = inst.f64.load
+
+  `+` = {! other: Double -> inst.f64.add !}: Double
+  `-` = {! other: Double -> inst.f64.sub !}: Double
+  `*` = {! other: Double -> inst.f64.mul !}: Double
+  `/` = {! other: Double -> inst.f64.div !}: Double
+  `>` = {! other: Double -> inst.f64.gt !}: Boolean
+  `<` = {! other: Double -> inst.f64.lt !}: Boolean
+  `>=` = {! other: Double -> inst.f64.ge !}: Boolean
+  `<=` = {! other: Double -> inst.f64.le !}: Boolean
+  `==` = {! other: Double -> inst.f64.eq !}: Boolean
+  `!=` = {! other: Double -> inst.f64.ne !}: Boolean
+  Min = {! other: Double -> inst.f64.min !}: Double
+  Max = {! other: Double -> inst.f64.max !}: Double
+>
+
