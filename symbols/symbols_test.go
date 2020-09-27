@@ -1,6 +1,7 @@
 package symbols_test
 
 import (
+	"sort"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -28,6 +29,16 @@ func scope(names ...string) symbols.Scope {
 		Expect(ok).To(BeTrue())
 	}
 	return b.Build()
+}
+
+func symsFrom(scope symbols.Scope, names ...string) symArray {
+	var result symArray
+	for _, name := range names {
+		s, ok := scope.Find(name)
+		Expect(ok).To(BeTrue())
+		result = append(result, s)
+	}
+	return result
 }
 
 func expect(scope symbols.Scope, names ...string) {
@@ -109,7 +120,77 @@ var _ = Describe("symbols", func() {
 		b.Enter(sym("d"))
 		expect(b.Build(), "a", "b", "c", "d")
 	})
+	It("can enumerate a single scope", func() {
+		s := scope("a", "b", "c")
+		var syms symArray
+		s.ForEach(func(symbol symbols.Symbol) bool {
+			syms = append(syms, symbol)
+			return false
+		})
+		sort.Sort(syms)
+		Expect(syms).To(Equal(symsFrom(s, "a", "b", "c")))
+	})
+	It("can terminate ForEach early", func() {
+		s := scope("a", "b", "c")
+		var sym symbols.Symbol
+		s.ForEach(func(symbol symbols.Symbol) bool {
+			if symbol.Name() == "b" {
+				sym = symbol
+				return true
+			}
+			return false
+		})
+		expected, _ := s.Find("b")
+		Expect(sym).To(Equal(expected))
+	})
+	It("can enumerate a multiScope", func() {
+		s := symbols.Merge(scope("a"), scope("b"), scope("c"))
+		var syms symArray
+		s.ForEach(func(symbol symbols.Symbol) bool {
+			syms = append(syms, symbol)
+			return false
+		})
+		Expect(syms).To(Equal(symsFrom(s, "a", "b", "c")))
+	})
+	It("it ForEach's the correct duplicate", func() {
+		s := symbols.Merge(scope("a"), scope("b"), scope("a"), scope("c"))
+		var syms symArray
+		s.ForEach(func(symbol symbols.Symbol) bool {
+			syms = append(syms, symbol)
+			return false
+		})
+		Expect(syms).To(Equal(symsFrom(s, "a", "b", "c")))
+	})
+	It("can terminate a mult-scope ForEach early", func() {
+		s := symbols.Merge(scope("a"), scope("b"), scope("c"))
+		var sym symbols.Symbol
+		s.ForEach(func(symbol symbols.Symbol) bool {
+			if symbol.Name() == "b" {
+				sym = symbol
+				return true
+			}
+			return false
+		})
+		expected, _ := s.Find("b")
+		Expect(sym).To(Equal(expected))
+	})
 })
+
+type symArray []symbols.Symbol
+
+func (a symArray) Len() int {
+	return len(a)
+}
+
+func (a symArray) Less(i, j int) bool {
+	return a[i].Name() < a[j].Name()
+}
+
+func (a symArray) Swap(i, j int) {
+	tmp := a[i]
+	a[i] = a[j]
+	a[j] = tmp
+}
 
 func TestErrors(t *testing.T) {
 	RegisterFailHandler(Fail)

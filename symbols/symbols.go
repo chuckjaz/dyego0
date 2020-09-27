@@ -12,6 +12,9 @@ type Scope interface {
 
 	// Determine if name is in scope
 	Contains(name string) bool
+
+	// ForEach enumerates the symbols in scope
+	ForEach(block func(Symbol) bool)
 }
 
 // ScopeBuilder is used to build a scope.
@@ -40,6 +43,14 @@ func (s *scope) Find(name string) (Symbol, bool) {
 func (s *scope) Contains(name string) bool {
 	_, ok := s.table[name]
 	return ok
+}
+
+func (s *scope) ForEach(block func(Symbol) bool) {
+	for _, symbol := range s.table {
+		if block(symbol) {
+			break
+		}
+	}
 }
 
 func newScope(table map[string]Symbol) Scope {
@@ -117,6 +128,24 @@ func (s *multiScope) Contains(name string) bool {
 	return ok
 }
 
+func (s *multiScope) ForEach(block func(Symbol) bool) {
+	emitted := make(map[Symbol]bool)
+	exit := false
+	for _, table := range s.scopes {
+		table.ForEach(func(symbol Symbol) bool {
+			_, ok := emitted[symbol]
+			if !ok {
+				emitted[symbol] = true
+				exit = block(symbol)
+			}
+			return exit
+		})
+		if exit {
+			break
+		}
+	}
+}
+
 func newMultiScope(scopes ...Scope) Scope {
 	var result []Scope
 	for _, scope := range scopes {
@@ -141,6 +170,9 @@ func (s emptyScope) Find(name string) (Symbol, bool) {
 
 func (s emptyScope) Contains(name string) bool {
 	return false
+}
+
+func (s emptyScope) ForEach(block func(Symbol) bool) {
 }
 
 // Merge merges scopes where the earlier scope takes precedence over later scopes
