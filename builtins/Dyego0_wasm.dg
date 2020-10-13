@@ -1,6 +1,6 @@
 //...Wasm
 
-...<|
+let Operators = <|
   postfix operator (`++`, `--`, `?.`, `?`) right,
   prefix operator (`+`, `-`, `--`, `++`) right,
   infix operator (`as`, `as?`) left,
@@ -153,5 +153,16 @@ let Double = <
   `!=` = {! other: Double -> inst.f64.ne !}: Boolean
   Min = {! other: Double -> inst.f64.min !}: Double
   Max = {! other: Double -> inst.f64.max !}: Double
+>
+
+<
+  ...Operators
+  Operators = Operators
+  Boolean = Boolean
+  Byte = Byte
+  Double = Double
+  Float = Float
+  Int = Int
+  Long = Long
 >
 

@@ -995,6 +995,7 @@ func TestErrors(t *testing.T) {
 	dyegoVocabulary := parseVocabulary(dyego0VocabularySource)
 	scope := newVocabularyScope()
 	scope.members["dyego"] = dyegoVocabulary
+	scope.members["Dyego0"] = dyegoVocabulary
 	defaultScope = scope
 
 	RegisterFailHandler(Fail)

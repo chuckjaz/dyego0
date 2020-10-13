@@ -321,9 +321,12 @@ func (p *parser) sequence() ast.Element {
 			left = p.expression()
 		}
 	case tokens.Symbol:
-		if p.pseudo == tokens.Spread {
+		switch p.pseudo {
+		case tokens.Spread:
 			left = p.spreadExpression()
-		} else {
+		case tokens.LessThan:
+			left = p.typeLiteral()
+		default:
 			left = p.expression()
 		}
 	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
@@ -1080,6 +1083,9 @@ func (p *parser) typeLiteral() ast.TypeLiteral {
 		case tokens.Symbol:
 			if p.pseudo == tokens.GreaterThan {
 				break
+			} else if p.pseudo == tokens.Spread {
+				members = append(members, p.spreadTypeMember())
+				continue
 			}
 			fallthrough
 		case tokens.Identifier:
@@ -1093,6 +1099,14 @@ func (p *parser) typeLiteral() ast.TypeLiteral {
 	p.separator()
 	p.expectPseudo(tokens.GreaterThan)
 	return p.builder.TypeLiteral(members)
+}
+
+func (p *parser) spreadTypeMember() ast.Element {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expectPseudo(tokens.Spread)
+	reference := p.typeReference()
+	return p.builder.SpreadTypeMember(reference)
 }
 
 func (p *parser) typeLiteralMember() ast.Element {
