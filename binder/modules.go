@@ -6,13 +6,13 @@ import (
 
 // ModuleSource is a source file for a module
 type ModuleSource interface {
-    // Name is the name the module that appears in the scope
+	// Name is the name the module that appears in the scope
 	Name() string
 
-    // FileName is the file name use in  error messages
+	// FileName is the file name use in  error messages
 	FileName() string
 
-    // NewReader create a reader for the source
+	// NewReader create a reader for the source
 	NewReader() (io.Reader, error)
 }
 
@@ -23,10 +23,10 @@ func NewModuleSource(name string, fileName string, readFactory func() (io.Reader
 
 // ModuleSourceScope is a scope for finding module sources
 type ModuleSourceScope interface {
-    // FindSocpe finds a subscope of a module scope
+	// FindSocpe finds a subscope of a module scope
 	FindScope(name string) (ModuleSourceScope, error)
 
-    // Find a source module in a scope 
+	// Find a source module in a scope
 	Find(name string) (ModuleSource, error)
 }
 

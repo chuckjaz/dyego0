@@ -313,6 +313,13 @@ type CallableTypeMember interface {
 	Result() Element
 }
 
+// SpreadTypeMember is a spread of another type into a type literal
+type SpreadTypeMember interface {
+	Element
+	Reference() Element
+	IsSpreadTypeMember() bool
+}
+
 // SequenceType transforms Elements() type reference into a sequence
 type SequenceType interface {
 	Element
@@ -486,6 +493,7 @@ type Builder interface {
 	TypeLiteralConstant(name Name, value Element) TypeLiteralConstant
 	TypeLiteralMember(name Name, typ Element) TypeLiteralMember
 	CallableTypeMember(parameters []Element, result Element) CallableTypeMember
+	SpreadTypeMember(reference Element) SpreadTypeMember
 	SequenceType(elements Element) SequenceType
 	OptionalType(element Element) OptionalType
 	VocabularyLiteral(members []Element) VocabularyLiteral
@@ -1511,6 +1519,27 @@ func (c *callableTypeMemberImpl) String() string {
 
 func (b *builderImpl) CallableTypeMember(parameters []Element, result Element) CallableTypeMember {
 	return &callableTypeMemberImpl{Location: b.Loc(), parameters: parameters, result: result}
+}
+
+type spreadTypeMemberImpl struct {
+	Location
+	reference Element
+}
+
+func (m *spreadTypeMemberImpl) Reference() Element {
+	return m.reference
+}
+
+func (m *spreadTypeMemberImpl) IsSpreadTypeMember() bool {
+	return true
+}
+
+func (m *spreadTypeMemberImpl) String() string {
+	return fmt.Sprintf("SpreadTypeMember(%s, reference: %s)", m.Location, s(m.reference))
+}
+
+func (b *builderImpl) SpreadTypeMember(reference Element) SpreadTypeMember {
+	return &spreadTypeMemberImpl{Location: b.Loc(), reference: reference}
 }
 
 type sequenceTypeImpl struct {

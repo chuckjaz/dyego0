@@ -272,6 +272,12 @@ var _ = Describe("ast", func() {
 			Expect(m.Result()).To(BeNil())
 			Expect(s(m)).To(Equal("CallableTypeMember(Location(0-1), parameters: [], result: nil)"))
 		})
+		It("SpreadTypeMember", func() {
+			m := b.SpreadTypeMember(nil)
+			Expect(m.Reference()).To(BeNil())
+			Expect(m.IsSpreadTypeMember()).To(BeTrue())
+			Expect(s(m)).To(Equal("SpreadTypeMember(Location(0-1), reference: nil)"))
+		})
 		It("SequenceType", func() {
 			n := b.SequenceType(nil)
 			Expect(n.Elements()).To(BeNil())

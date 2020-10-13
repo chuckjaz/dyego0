@@ -77,13 +77,13 @@ func (s *filesScope) populate(fileName string, reader func(fileName string) (io.
 		s.files[name] = &fileModule{name: name, fileName: fileName, reader: reader}
 		return nil
 	}
-    scopeName := dir[0]
-    scope, ok := s.scopes[scopeName]
-    if !ok {
-        scope = newFilesScope()
-        s.scopes[scopeName] = scope
-    }
-     return scope.populate(fileName, reader, dir[1:], name)
+	scopeName := dir[0]
+	scope, ok := s.scopes[scopeName]
+	if !ok {
+		scope = newFilesScope()
+		s.scopes[scopeName] = scope
+	}
+	return scope.populate(fileName, reader, dir[1:], name)
 }
 
 func splitName(fileName string) []string {

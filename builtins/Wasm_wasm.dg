@@ -233,3 +233,8 @@ let inst = <
   >
 >
 
+<
+  valtype = valtype
+  inst = inst
+  limits = limits
+>
