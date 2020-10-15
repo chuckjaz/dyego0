@@ -175,7 +175,7 @@ type NamedMemberInitializer interface {
 type SpreadMemberInitializer interface {
 	Element
 	Target() Element
-	IsSpread() bool
+	IsSpreadMemberInitializer() bool
 }
 
 // Lambda is a lambda
@@ -184,6 +184,7 @@ type Lambda interface {
 	TypeParameters() TypeParameters
 	Parameters() []Parameter
 	Body() Element
+	IsLambda() bool
 }
 
 // IntrinsicLambda is that specifies instructions
@@ -1032,7 +1033,7 @@ func (n *spreadMemberInitializerImpl) Target() Element {
 	return n.target
 }
 
-func (n *spreadMemberInitializerImpl) IsSpread() bool {
+func (n *spreadMemberInitializerImpl) IsSpreadMemberInitializer() bool {
 	return true
 }
 
@@ -1061,6 +1062,10 @@ func (l *lambdaImpl) Parameters() []Parameter {
 
 func (l *lambdaImpl) Body() Element {
 	return l.body
+}
+
+func (l *lambdaImpl) IsLambda() bool {
+	return true
 }
 
 // LowerParameters converts a []Parameter to []Element

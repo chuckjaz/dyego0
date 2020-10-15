@@ -151,7 +151,7 @@ var _ = Describe("ast", func() {
 		It("SpreadMemberInitializer", func() {
 			l := b.SpreadMemberInitializer(nil)
 			Expect(l.Target()).To(BeNil())
-			Expect(l.IsSpread()).To(Equal(true))
+			Expect(l.IsSpreadMemberInitializer()).To(Equal(true))
 			Expect(s(l)).To(Equal("SpreadMemberInitializer(Location(0-1), target: nil)"))
 		})
 		It("Lambda", func() {
