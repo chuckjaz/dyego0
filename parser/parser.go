@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"go/token"
 
 	"dyego0/assert"
 	"dyego0/ast"
@@ -230,7 +229,7 @@ func (p *parser) firstOf(options ...func() ast.Element) ast.Element {
 	preserved := p.preserve()
 	firstErrorIndex := len(p.errors)
 	var longestErrorOption *parser
-	longestErrorEnd := token.Pos(0)
+	longestErrorEnd := tokens.Pos(0)
 	var errorResult ast.Element
 	for _, option := range options {
 		result := option()
@@ -255,7 +254,7 @@ func (p *parser) firstOfArray(options ...func() []ast.Element) []ast.Element {
 	preserved := p.preserve()
 	firstErrorIndex := len(p.errors)
 	var longestErrorOption *parser
-	longestErrorEnd := token.Pos(0)
+	longestErrorEnd := tokens.Pos(0)
 	var errorResult []ast.Element
 	for _, option := range options {
 		result := option()

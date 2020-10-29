@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"go/token"
 	"strings"
 	"testing"
 
@@ -20,23 +19,23 @@ func paniced(fn func()) bool {
 }
 
 func TestNew(t *testing.T) {
-	NewScanner([]byte{0}, 0)
+	NewScanner([]byte{0}, 0, nil)
 }
 
 func TestInvalidBuffer(t *testing.T) {
 	emptyInvalid := paniced(func() {
-		NewScanner([]byte{}, 0)
+		NewScanner([]byte{}, 0, nil)
 	})
 	noNullTerminatorInvalid := paniced(func() {
-		NewScanner([]byte{'a', 'b', 'c'}, 0)
+		NewScanner([]byte{'a', 'b', 'c'}, 0, nil)
 	})
 	if !emptyInvalid || !noNullTerminatorInvalid {
 		t.Fail()
 	}
 }
 
-func parsePseudoBytes(t *testing.T, src []byte, expectedToken tokens.Token, expected ...tokens.PseudoToken) (token.Pos, int, int) {
-	scanner := NewScanner(src, 0)
+func parsePseudoBytes(t *testing.T, src []byte, expectedToken tokens.Token, expected ...tokens.PseudoToken) (tokens.Pos, int, int) {
+	scanner := NewScanner(src, 0, nil)
 	var received tokens.PseudoToken
 	for _, pseudoToken := range expected {
 		token := scanner.Next()
@@ -57,12 +56,12 @@ func parsePseudoBytes(t *testing.T, src []byte, expectedToken tokens.Token, expe
 	return scanner.Start(), scanner.Offset(), scanner.Line()
 }
 
-func parsePseudo(t *testing.T, text string, expectedToken tokens.Token, expected ...tokens.PseudoToken) (token.Pos, int, int) {
+func parsePseudo(t *testing.T, text string, expectedToken tokens.Token, expected ...tokens.PseudoToken) (tokens.Pos, int, int) {
 	return parsePseudoBytes(t, append([]byte(text), 0), expectedToken, expected...)
 }
 
-func parseBytes(t *testing.T, src []byte, expected ...tokens.Token) (token.Pos, int, int) {
-	scanner := NewScanner(src, 0)
+func parseBytes(t *testing.T, src []byte, expected ...tokens.Token) (tokens.Pos, int, int) {
+	scanner := NewScanner(src, 0, nil)
 	var received tokens.Token
 	for _, token := range expected {
 		received = scanner.Next()
@@ -76,14 +75,14 @@ func parseBytes(t *testing.T, src []byte, expected ...tokens.Token) (token.Pos, 
 	return scanner.Start(), scanner.Offset(), scanner.Line()
 }
 
-func parseString(t *testing.T, text string, expected ...tokens.Token) (token.Pos, int, int) {
+func parseString(t *testing.T, text string, expected ...tokens.Token) (tokens.Pos, int, int) {
 	src := append([]byte(text), 0)
 	return parseBytes(t, src, expected...)
 }
 
 func scanOne(text string) (scanner *Scanner, token tokens.Token) {
 	src := append([]byte(text), 0)
-	scanner = NewScanner(src, 0)
+	scanner = NewScanner(src, 0, nil)
 	token = scanner.Next()
 	return
 }
@@ -183,9 +182,9 @@ func TestOffset(t *testing.T) {
 func TestStart(t *testing.T) {
 	text := " a b c "
 	src := append([]byte(text), 0)
-	scanner := NewScanner(src, 0)
+	scanner := NewScanner(src, 0, nil)
 	scanner.Next()
-	for _, expected := range []token.Pos{1, 3, 5} {
+	for _, expected := range []tokens.Pos{1, 3, 5} {
 		if scanner.Start() != expected {
 			t.Errorf("Expected %d, to be %d", scanner.Start(), expected)
 		}

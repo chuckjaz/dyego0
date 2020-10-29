@@ -154,7 +154,7 @@ func (fs *fileSet) add(file *file) {
 func (fs *fileSet) BuildFile(filename string, size int) FileBuilder {
 	b := fs.base
 	fs.base = b + size
-	return &fileBuilder{filename: filename, size: size, base: b, fileSet: fs}
+	return &fileBuilder{filename: filename, size: size, base: b, fileSet: fs, lines: lines{0}}
 }
 
 func (fs *fileSet) Position(p Pos) Position {

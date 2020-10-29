@@ -1,34 +1,34 @@
 package ast
 
 import (
+	"dyego0/tokens"
 	"fmt"
-	"go/token"
 )
 
 // Locatable allows locating an item in a source file
 type Locatable interface {
-	Start() token.Pos
-	End() token.Pos
+	Start() tokens.Pos
+	End() tokens.Pos
 	Length() int
 }
 
 // Location is the location of an item in a source file
 type Location struct {
-	start, end token.Pos
+	start, end tokens.Pos
 }
 
 // NewLocation creates a new location
-func NewLocation(start, end token.Pos) Location {
+func NewLocation(start, end tokens.Pos) Location {
 	return Location{start, end}
 }
 
 // Start is the start of the item in a source file
-func (l Location) Start() token.Pos {
+func (l Location) Start() tokens.Pos {
 	return l.start
 }
 
 // End is the end of the item in a source file
-func (l Location) End() token.Pos {
+func (l Location) End() tokens.Pos {
 	return l.end
 }
 
