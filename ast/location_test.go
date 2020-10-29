@@ -1,13 +1,15 @@
 package ast_test
 
-import "go/token"
-import . "github.com/onsi/ginkgo"
-import . "github.com/onsi/gomega"
-import "dyego0/ast"
+import (
+	"dyego0/ast"
+	"dyego0/tokens"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
 
 var _ = Describe("location", func() {
-	s := token.Pos(1)
-	e := token.Pos(100)
+	s := tokens.Pos(1)
+	e := tokens.Pos(100)
 	l := ast.NewLocation(s, e)
 
 	It("should access start", func() {

@@ -9,11 +9,10 @@ import (
 
 	"dyego0/scanner"
 	"dyego0/tokens"
-	"go/token"
 )
 
 func scanBytes(src []byte, expected ...tokens.Token) int {
-	scanner := scanner.NewScanner(src, 0)
+	scanner := scanner.NewScanner(src, 0, nil)
 	var received tokens.Token
 	for _, token := range expected {
 		received = scanner.Next()
@@ -31,23 +30,23 @@ func scanString(text string, expected ...tokens.Token) int {
 
 func scannerOf(text string) *scanner.Scanner {
 	src := append([]byte(text), 0)
-	return scanner.NewScanner(src, 0)
+	return scanner.NewScanner(src, 0, nil)
 }
 
 var _ = Describe("scanner", func() {
 	Describe("when constructing the instance", func() {
 		It("should not panic", func() {
-			scanner.NewScanner([]byte{0}, 0)
+			scanner.NewScanner([]byte{0}, 0, nil)
 		})
 	})
 	It("should panic when an empty buffer is passed", func() {
 		Ω(func() {
-			scanner.NewScanner([]byte{}, 0)
+			scanner.NewScanner([]byte{}, 0, nil)
 		}).Should(Panic())
 	})
 	It("should panic when a non-null-terminated buffer is passed", func() {
 		Ω(func() {
-			scanner.NewScanner([]byte{'a', 'b', 'c'}, 0)
+			scanner.NewScanner([]byte{'a', 'b', 'c'}, 0, nil)
 		})
 	})
 	Describe("when parsing", func() {
@@ -65,11 +64,11 @@ var _ = Describe("scanner", func() {
 			Ω(lines).Should(Equal(4))
 		})
 		It("should be able to clone a scanner", func() {
-			s := scanner.NewScanner(append([]byte(" a b c "), 0), 0)
+			s := scanner.NewScanner(append([]byte(" a b c "), 0), 0, nil)
 			s.Next()
 			c := s.Clone()
-			Expect(s.Start()).To(Equal(token.Pos(1)))
-			Expect(s.End()).To(Equal(token.Pos(2)))
+			Expect(s.Start()).To(Equal(tokens.Pos(1)))
+			Expect(s.End()).To(Equal(tokens.Pos(2)))
 			Expect(s.Start()).To(Equal(c.Start()))
 			Expect(s.End()).To(Equal(c.End()))
 		})
@@ -107,17 +106,17 @@ var _ = Describe("scanner", func() {
 		})
 		It("can indicate where the nl was", func() {
 			s := scannerOf("a b \n c d \n e")
-			Expect(s.NewLineLocation()).To(Equal(token.Pos(0)))
+			Expect(s.NewLineLocation().IsValid()).To(BeFalse())
 			s.Next()
-			Expect(s.NewLineLocation()).To(Equal(token.Pos(0)))
+			Expect(s.NewLineLocation().IsValid()).To(BeFalse())
 			s.Next()
-			Expect(s.NewLineLocation()).To(Equal(token.Pos(0)))
+			Expect(s.NewLineLocation().IsValid()).To(BeFalse())
 			s.Next()
-			Expect(s.NewLineLocation()).To(Equal(token.Pos(4)))
+			Expect(s.NewLineLocation()).To(Equal(tokens.Pos(4)))
 			s.Next()
-			Expect(s.NewLineLocation()).To(Equal(token.Pos(0)))
+			Expect(s.NewLineLocation().IsValid()).To(BeFalse())
 			s.Next()
-			Expect(s.NewLineLocation()).To(Equal(token.Pos(10)))
+			Expect(s.NewLineLocation()).To(Equal(tokens.Pos(10)))
 		})
 	})
 })

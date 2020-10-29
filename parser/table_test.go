@@ -108,7 +108,7 @@ var _ = Describe("table", func() {
 	})
 	Describe("buildVocabulary", func() {
 		scan := func(text string) *scanner.Scanner {
-			return scanner.NewScanner(append([]byte(text), 0), 0)
+			return scanner.NewScanner(append([]byte(text), 0), 0, nil)
 		}
 		b := ast.NewBuilder(scan(""))
 		b.PushContext()

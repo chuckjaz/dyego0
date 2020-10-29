@@ -9,11 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"go/token"
-
 	"dyego0/assert"
 	"dyego0/ast"
 	"dyego0/scanner"
+	"dyego0/tokens"
 )
 
 var _ = Describe("parser", func() {
@@ -238,8 +237,8 @@ var _ = Describe("parser", func() {
 			Expect(ok).To(Equal(true))
 			Expect(t.Text()).To(Equal("a"))
 			Expect(l.Member().Text()).To(Equal("b"))
-			Expect(l.Start()).To(Equal(token.Pos(0)))
-			Expect(l.End()).To(Equal(token.Pos(3)))
+			Expect(l.Start()).To(Equal(tokens.Pos(0)))
+			Expect(l.End()).To(Equal(tokens.Pos(3)))
 		})
 		It("can parse a call", func() {
 			na := func(e ast.Element) ast.NamedArgument {
@@ -855,7 +854,7 @@ var _ = Describe("parser", func() {
 })
 
 func scan(text string) *scanner.Scanner {
-	return scanner.NewScanner(append([]byte(text), 0), 0)
+	return scanner.NewScanner(append([]byte(text), 0), 0, nil)
 }
 
 var dyego0VocabularySource = strings.ReplaceAll(`

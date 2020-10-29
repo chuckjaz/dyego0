@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"fmt"
-	"go/token"
 	"strconv"
 
 	"dyego0/tokens"
@@ -16,6 +15,7 @@ const (
 // Scanner is a Dyego scanner
 type Scanner struct {
 	src    []byte
+	fb     tokens.FileBuilder
 	offset int
 	line   int
 	start  int
@@ -28,19 +28,22 @@ type Scanner struct {
 }
 
 // NewScanner creates a scanner
-func NewScanner(src []byte, flags int) *Scanner {
+func NewScanner(src []byte, flags int, fb tokens.FileBuilder) *Scanner {
 	length := len(src)
 	if length == 0 || src[length-1] != 0 {
 		panic("NewScanner: src must be null terminated")
 	}
-	return &Scanner{src: src, line: 1, flags: flags}
+	if fb != nil {
+		fb.AddLine(0)
+	}
+	return &Scanner{src: src, fb: fb, line: 1, nlloc: -1, flags: flags}
 }
 
 // Clone preserves a copy of the scanner at the current state which can then be used
 // for backtracking, if necessary by using the returned instance instead of the
 // instance that was moved forward.
 func (s *Scanner) Clone() *Scanner {
-	return &Scanner{src: s.src, offset: s.offset, line: s.line, start: s.start, end: s.end, nlloc: s.nlloc,
+	return &Scanner{src: s.src, fb: s.fb, offset: s.offset, line: s.line, start: s.start, end: s.end, nlloc: s.nlloc,
 		msg: s.msg, flags: s.flags, pseudo: s.pseudo, value: s.value}
 }
 
@@ -50,18 +53,27 @@ func (s *Scanner) Line() int {
 }
 
 // Start is the start of the current token
-func (s *Scanner) Start() token.Pos {
-	return token.Pos(s.start)
+func (s *Scanner) Start() tokens.Pos {
+	if s.fb != nil {
+		return s.fb.Pos(s.start)
+	}
+	return tokens.Pos(s.start)
 }
 
 // End is the end of the current token
-func (s *Scanner) End() token.Pos {
-	return token.Pos(s.end)
+func (s *Scanner) End() tokens.Pos {
+	if s.fb != nil {
+		return s.fb.Pos(s.end)
+	}
+	return tokens.Pos(s.end)
 }
 
 // NewLineLocation is the location of a new line prior to the current token
-func (s *Scanner) NewLineLocation() token.Pos {
-	return token.Pos(s.nlloc)
+func (s *Scanner) NewLineLocation() tokens.Pos {
+	if s.nlloc >= 0 && s.fb != nil {
+		return s.fb.Pos(s.nlloc)
+	}
+	return tokens.Pos(s.nlloc)
 }
 
 // Offset is the current location of the scanner
@@ -124,7 +136,7 @@ func (s *Scanner) Next() tokens.Token {
 	result := tokens.Invalid
 	s.pseudo = tokens.InvalidPseudoToken
 	s.value = nil
-	s.nlloc = 0
+	s.nlloc = -1
 loop:
 	for {
 		b := src[offset]
@@ -148,6 +160,9 @@ loop:
 		case '\n':
 			line++
 			s.nlloc = offset - 1
+			if s.fb != nil {
+				s.fb.AddLine(offset)
+			}
 			continue
 
 		case '+', '|', '-', '*', '/', '%', '!', '&', '>', '<',
