@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"dyego0/ast"
+    "dyego0/location"
 	"dyego0/tokens"
 )
 
@@ -17,7 +18,7 @@ func s(a interface{}) string {
 
 var _ = Describe("ast", func() {
 	Describe("construct", func() {
-		b := ast.NewBuilder(ast.NewLocation(0, 1))
+		b := ast.NewBuilder(location.NewLocation(0, 1))
 		b.PushContext()
 		It("Name", func() {
 			n := b.Name("text")
@@ -410,5 +411,5 @@ func (b BuilderContext) End() tokens.Pos {
 
 func TestErrors(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Errors Suite")
+	RunSpecs(t, "Ast Suite")
 }

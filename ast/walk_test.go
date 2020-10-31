@@ -5,10 +5,11 @@ import (
 	. "github.com/onsi/gomega"
 
 	"dyego0/ast"
+    "dyego0/location"
 )
 
 var _ = Describe("walk", func() {
-	b := ast.NewBuilder(ast.NewLocation(0, 1))
+	b := ast.NewBuilder(location.NewLocation(0, 1))
 	b.PushContext()
 
 	n := b.Name("n")

@@ -1,13 +1,14 @@
 package ast
 
 import (
+    "dyego0/location"
 	"dyego0/tokens"
 	"fmt"
 )
 
 // Element is the root of all AST nodes.
 type Element interface {
-	Locatable
+	location.Locatable
 }
 
 // Name is an identifier name
@@ -513,17 +514,13 @@ type Builder interface {
 	Error(message string) Error
 	DirectError(start, end tokens.Pos, message string) Error
 	Clone(context BuilderContext) Builder
-	Loc() Location
+	Loc() location.Location
 }
 
 // BuilderContext provides the source location for a Builder
 type BuilderContext interface {
 	Start() tokens.Pos
 	End() tokens.Pos
-}
-
-type position struct {
-	start, end tokens.Pos
 }
 
 type builderImpl struct {
@@ -544,13 +541,13 @@ func (b *builderImpl) PopContext() {
 	b.locations = b.locations[0 : len(b.locations)-1]
 }
 
-func (b *builderImpl) Loc() Location {
+func (b *builderImpl) Loc() location.Location {
 	start := b.locations[len(b.locations)-1]
-	return NewLocation(start, b.context.End())
+	return location.NewLocation(start, b.context.End())
 }
 
 type nameImpl struct {
-	Location
+	location.Location
 	text string
 }
 
@@ -567,7 +564,7 @@ func (b *builderImpl) Name(text string) Name {
 }
 
 type literalRuneImpl struct {
-	Location
+	location.Location
 	value rune
 }
 
@@ -584,7 +581,7 @@ func (b *builderImpl) LiteralRune(value rune) LiteralRune {
 }
 
 type literalByteImpl struct {
-	Location
+	location.Location
 	value byte
 }
 
@@ -601,7 +598,7 @@ func (b *builderImpl) LiteralByte(value byte) LiteralByte {
 }
 
 type literalIntImpl struct {
-	Location
+	location.Location
 	value int
 }
 
@@ -618,7 +615,7 @@ func (b *builderImpl) LiteralInt(value int) LiteralInt {
 }
 
 type literalUIntImpl struct {
-	Location
+	location.Location
 	value uint
 }
 
@@ -635,7 +632,7 @@ func (b *builderImpl) LiteralUInt(value uint) LiteralUInt {
 }
 
 type literalLongImpl struct {
-	Location
+	location.Location
 	value int64
 }
 
@@ -652,7 +649,7 @@ func (b *builderImpl) LiteralLong(value int64) LiteralLong {
 }
 
 type literalULongImpl struct {
-	Location
+	location.Location
 	value uint64
 }
 
@@ -669,7 +666,7 @@ func (b *builderImpl) LiteralULong(value uint64) LiteralULong {
 }
 
 type literalDoubleImpl struct {
-	Location
+	location.Location
 	value float64
 }
 
@@ -686,7 +683,7 @@ func (b *builderImpl) LiteralDouble(value float64) LiteralDouble {
 }
 
 type literalFloatImpl struct {
-	Location
+	location.Location
 	value float32
 }
 
@@ -703,7 +700,7 @@ func (b *builderImpl) LiteralFloat(value float32) LiteralFloat {
 }
 
 type literalBooleanImpl struct {
-	Location
+	location.Location
 	value bool
 }
 
@@ -720,7 +717,7 @@ func (b *builderImpl) LiteralBoolean(value bool) LiteralBoolean {
 }
 
 type literalStringImpl struct {
-	Location
+	location.Location
 	value string
 }
 
@@ -737,7 +734,7 @@ func (b *builderImpl) LiteralString(value string) LiteralString {
 }
 
 type literalNullImpl struct {
-	Location
+	location.Location
 }
 
 func (l *literalNullImpl) IsNull() bool {
@@ -753,7 +750,7 @@ func (b *builderImpl) LiteralNull() LiteralNull {
 }
 
 type breakImpl struct {
-	Location
+	location.Location
 	label Name
 }
 
@@ -774,7 +771,7 @@ func (b *builderImpl) Break(label Name) Break {
 }
 
 type continueImpl struct {
-	Location
+	location.Location
 	label Name
 }
 
@@ -795,7 +792,7 @@ func (b *builderImpl) Continue(label Name) Continue {
 }
 
 type selectionImpl struct {
-	Location
+	location.Location
 	target Element
 	member Name
 }
@@ -824,7 +821,7 @@ func (b *builderImpl) Selection(target Element, member Name) Selection {
 }
 
 type sequenceImpl struct {
-	Location
+	location.Location
 	left  Element
 	right Element
 }
@@ -850,7 +847,7 @@ func (b *builderImpl) Sequence(left, right Element) Sequence {
 }
 
 type spreadImpl struct {
-	Location
+	location.Location
 	target Element
 }
 
@@ -871,7 +868,7 @@ func (b *builderImpl) Spread(target Element) Spread {
 }
 
 type callImpl struct {
-	Location
+	location.Location
 	target    Element
 	arguments []Element
 }
@@ -907,7 +904,7 @@ func (b *builderImpl) Call(target Element, arguments []Element) Call {
 }
 
 type namedArgumentImpl struct {
-	Location
+	location.Location
 	name  Name
 	value Element
 }
@@ -933,7 +930,7 @@ func (b *builderImpl) NamedArgument(name Name, value Element) NamedArgument {
 }
 
 type objectInitializerImpl struct {
-	Location
+	location.Location
 	mutable bool
 	typ     Element
 	members []Element
@@ -965,7 +962,7 @@ func (b *builderImpl) ObjectInitializer(mutable bool, typ Element, members []Ele
 }
 
 type arrayInitializerImpl struct {
-	Location
+	location.Location
 	mutable  bool
 	typ      Element
 	elements []Element
@@ -997,7 +994,7 @@ func (b *builderImpl) ArrayInitializer(mutable bool, typ Element, elements []Ele
 }
 
 type namedMemberInitializerImpl struct {
-	Location
+	location.Location
 	name  Name
 	typ   Element
 	value Element
@@ -1025,7 +1022,7 @@ func (b *builderImpl) NamedMemberInitializer(name Name, typ Element, value Eleme
 }
 
 type spreadMemberInitializerImpl struct {
-	Location
+	location.Location
 	target Element
 }
 
@@ -1046,7 +1043,7 @@ func (b *builderImpl) SpreadMemberInitializer(target Element) SpreadMemberInitia
 }
 
 type lambdaImpl struct {
-	Location
+	location.Location
 	typeParameters TypeParameters
 	parameters     []Parameter
 	body           Element
@@ -1091,7 +1088,7 @@ func (b *builderImpl) Lambda(typeParameters TypeParameters, parameters []Paramet
 }
 
 type intrinsicLambdaImpl struct {
-	Location
+	location.Location
 	typeParameters TypeParameters
 	parameters     []Parameter
 	body           Element
@@ -1128,7 +1125,7 @@ func (b *builderImpl) IntrinsicLambda(typeParameters TypeParameters, parameters 
 }
 
 type loopImpl struct {
-	Location
+	location.Location
 	label Name
 	body  Element
 }
@@ -1154,7 +1151,7 @@ func (b *builderImpl) Loop(label Name, body Element) Loop {
 }
 
 type parameterImpl struct {
-	Location
+	location.Location
 	name  Name
 	typ   Element
 	deflt Element
@@ -1185,7 +1182,7 @@ func (b *builderImpl) Parameter(name Name, typ Element, deflt Element) Parameter
 }
 
 type returnImpl struct {
-	Location
+	location.Location
 	value Element
 }
 
@@ -1206,7 +1203,7 @@ func (b *builderImpl) Return(value Element) Return {
 }
 
 type typeParametersImpl struct {
-	Location
+	location.Location
 	parameters []TypeParameter
 	wheres     []Where
 }
@@ -1248,7 +1245,7 @@ func (b *builderImpl) TypeParameters(parameters []TypeParameter, wheres []Where)
 }
 
 type typeParameterImpl struct {
-	Location
+	location.Location
 	name       Name
 	constraint Element
 }
@@ -1274,7 +1271,7 @@ func (b *builderImpl) TypeParameter(name Name, constraint Element) TypeParameter
 }
 
 type whenImpl struct {
-	Location
+	location.Location
 	target  Element
 	clauses []Element
 }
@@ -1296,7 +1293,7 @@ func (b *builderImpl) When(target Element, clauses []Element) When {
 }
 
 type whenElseClauseImpl struct {
-	Location
+	location.Location
 	body Element
 }
 
@@ -1317,7 +1314,7 @@ func (b *builderImpl) WhenElseClause(body Element) WhenElseClause {
 }
 
 type whenValueClauseImpl struct {
-	Location
+	location.Location
 	value Element
 	body  Element
 }
@@ -1343,7 +1340,7 @@ func (b *builderImpl) WhenValueClause(value Element, body Element) WhenValueClau
 }
 
 type whereImpl struct {
-	Location
+	location.Location
 	left  Element
 	right Element
 }
@@ -1369,7 +1366,7 @@ func (b *builderImpl) Where(left, right Element) Where {
 }
 
 type varDefinitionImpl struct {
-	Location
+	location.Location
 	name    Name
 	typ     Element
 	value   Element
@@ -1406,7 +1403,7 @@ func (b *builderImpl) VarDefinition(name Name, typ Element, value Element, mutab
 }
 
 type letDefinitionImpl struct {
-	Location
+	location.Location
 	name  Element
 	value Element
 }
@@ -1432,7 +1429,7 @@ func (b *builderImpl) LetDefinition(name Element, value Element) LetDefinition {
 }
 
 type typeLiteralImpl struct {
-	Location
+	location.Location
 	members []Element
 }
 
@@ -1453,7 +1450,7 @@ func (b *builderImpl) TypeLiteral(members []Element) TypeLiteral {
 }
 
 type typeLiteralConstantImpl struct {
-	Location
+	location.Location
 	name  Name
 	value Element
 }
@@ -1479,7 +1476,7 @@ func (b *builderImpl) TypeLiteralConstant(name Name, value Element) TypeLiteralC
 }
 
 type typeLiteralMemberImpl struct {
-	Location
+	location.Location
 	name Name
 	typ  Element
 }
@@ -1505,7 +1502,7 @@ func (b *builderImpl) TypeLiteralMember(name Name, typ Element) TypeLiteralMembe
 }
 
 type callableTypeMemberImpl struct {
-	Location
+	location.Location
 	parameters []Element
 	result     Element
 }
@@ -1527,7 +1524,7 @@ func (b *builderImpl) CallableTypeMember(parameters []Element, result Element) C
 }
 
 type spreadTypeMemberImpl struct {
-	Location
+	location.Location
 	reference Element
 }
 
@@ -1548,7 +1545,7 @@ func (b *builderImpl) SpreadTypeMember(reference Element) SpreadTypeMember {
 }
 
 type sequenceTypeImpl struct {
-	Location
+	location.Location
 	elements Element
 }
 
@@ -1569,7 +1566,7 @@ func (b *builderImpl) SequenceType(elements Element) SequenceType {
 }
 
 type optionalTypeImpl struct {
-	Location
+	location.Location
 	element Element
 }
 
@@ -1590,7 +1587,7 @@ func (b *builderImpl) OptionalType(element Element) OptionalType {
 }
 
 type vocabularyLiteralImpl struct {
-	Location
+	location.Location
 	members []Element
 }
 
@@ -1611,7 +1608,7 @@ func (b *builderImpl) VocabularyLiteral(members []Element) VocabularyLiteral {
 }
 
 type vocabularyOperatorDeclarationImpl struct {
-	Location
+	location.Location
 	names         []Name
 	placement     OperatorPlacement
 	precedence    VocabularyOperatorPrecedence
@@ -1664,7 +1661,7 @@ func (b *builderImpl) VocabularyOperatorDeclaration(
 }
 
 type vocabularyOperatorPrecedenceImpl struct {
-	Location
+	location.Location
 	name      Name
 	placement OperatorPlacement
 	relation  OperatorPrecedenceRelation
@@ -1701,7 +1698,7 @@ func (b *builderImpl) VocabularyOperatorPrecedence(
 }
 
 type vocabularyEmbeddingImpl struct {
-	Location
+	location.Location
 	name []Name
 }
 
@@ -1722,7 +1719,7 @@ func (b *builderImpl) VocabularyEmbedding(name []Name) VocabularyEmbedding {
 }
 
 type errorImpl struct {
-	Location
+	location.Location
 	message string
 }
 
@@ -1739,7 +1736,7 @@ func (b *builderImpl) Error(message string) Error {
 }
 
 func (b *builderImpl) DirectError(start, end tokens.Pos, message string) Error {
-	return &errorImpl{Location: NewLocation(start, end), message: message}
+	return &errorImpl{Location: location.NewLocation(start, end), message: message}
 }
 
 func (b *builderImpl) Clone(context BuilderContext) Builder {
