@@ -1,8 +1,8 @@
-package ast
+package location
 
 import (
-	"dyego0/tokens"
 	"fmt"
+	"dyego0/tokens"
 )
 
 // Locatable allows locating an item in a source file
