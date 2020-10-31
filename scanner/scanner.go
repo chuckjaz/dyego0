@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"dyego0/location"
 	"dyego0/tokens"
 )
 
@@ -53,27 +54,27 @@ func (s *Scanner) Line() int {
 }
 
 // Start is the start of the current token
-func (s *Scanner) Start() tokens.Pos {
+func (s *Scanner) Start() location.Pos {
 	if s.fb != nil {
 		return s.fb.Pos(s.start)
 	}
-	return tokens.Pos(s.start)
+	return location.Pos(s.start)
 }
 
 // End is the end of the current token
-func (s *Scanner) End() tokens.Pos {
+func (s *Scanner) End() location.Pos {
 	if s.fb != nil {
 		return s.fb.Pos(s.end)
 	}
-	return tokens.Pos(s.end)
+	return location.Pos(s.end)
 }
 
 // NewLineLocation is the location of a new line prior to the current token
-func (s *Scanner) NewLineLocation() tokens.Pos {
+func (s *Scanner) NewLineLocation() location.Pos {
 	if s.nlloc >= 0 && s.fb != nil {
 		return s.fb.Pos(s.nlloc)
 	}
-	return tokens.Pos(s.nlloc)
+	return location.Pos(s.nlloc)
 }
 
 // Offset is the current location of the scanner

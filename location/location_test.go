@@ -1,16 +1,15 @@
 package location_test
 
 import (
-    "testing"
 	"dyego0/location"
-	"dyego0/tokens"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"testing"
 )
 
 var _ = Describe("location", func() {
-	s := tokens.Pos(1)
-	e := tokens.Pos(100)
+	s := location.Pos(1)
+	e := location.Pos(100)
 	l := location.NewLocation(s, e)
 
 	It("should access start", func() {
@@ -24,10 +23,16 @@ var _ = Describe("location", func() {
 	It("should access length", func() {
 		Expect(l.Length()).To(Equal(99))
 	})
+
+	It("can report an invalid position", func() {
+		Expect(location.Pos(-1).IsValid()).To(BeFalse())
+	})
+	It("can report a valid position", func() {
+		Expect(location.Pos(100).IsValid()).To(BeTrue())
+	})
 })
 
 func TestErrors(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Location Suite")
 }
-

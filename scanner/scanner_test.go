@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"dyego0/location"
 	"dyego0/tokens"
 )
 
@@ -34,7 +35,7 @@ func TestInvalidBuffer(t *testing.T) {
 	}
 }
 
-func parsePseudoBytes(t *testing.T, src []byte, expectedToken tokens.Token, expected ...tokens.PseudoToken) (tokens.Pos, int, int) {
+func parsePseudoBytes(t *testing.T, src []byte, expectedToken tokens.Token, expected ...tokens.PseudoToken) (location.Pos, int, int) {
 	scanner := NewScanner(src, 0, nil)
 	var received tokens.PseudoToken
 	for _, pseudoToken := range expected {
@@ -56,11 +57,11 @@ func parsePseudoBytes(t *testing.T, src []byte, expectedToken tokens.Token, expe
 	return scanner.Start(), scanner.Offset(), scanner.Line()
 }
 
-func parsePseudo(t *testing.T, text string, expectedToken tokens.Token, expected ...tokens.PseudoToken) (tokens.Pos, int, int) {
+func parsePseudo(t *testing.T, text string, expectedToken tokens.Token, expected ...tokens.PseudoToken) (location.Pos, int, int) {
 	return parsePseudoBytes(t, append([]byte(text), 0), expectedToken, expected...)
 }
 
-func parseBytes(t *testing.T, src []byte, expected ...tokens.Token) (tokens.Pos, int, int) {
+func parseBytes(t *testing.T, src []byte, expected ...tokens.Token) (location.Pos, int, int) {
 	scanner := NewScanner(src, 0, nil)
 	var received tokens.Token
 	for _, token := range expected {
@@ -75,7 +76,7 @@ func parseBytes(t *testing.T, src []byte, expected ...tokens.Token) (tokens.Pos,
 	return scanner.Start(), scanner.Offset(), scanner.Line()
 }
 
-func parseString(t *testing.T, text string, expected ...tokens.Token) (tokens.Pos, int, int) {
+func parseString(t *testing.T, text string, expected ...tokens.Token) (location.Pos, int, int) {
 	src := append([]byte(text), 0)
 	return parseBytes(t, src, expected...)
 }
@@ -184,7 +185,7 @@ func TestStart(t *testing.T) {
 	src := append([]byte(text), 0)
 	scanner := NewScanner(src, 0, nil)
 	scanner.Next()
-	for _, expected := range []tokens.Pos{1, 3, 5} {
+	for _, expected := range []location.Pos{1, 3, 5} {
 		if scanner.Start() != expected {
 			t.Errorf("Expected %d, to be %d", scanner.Start(), expected)
 		}

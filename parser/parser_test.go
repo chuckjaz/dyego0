@@ -11,8 +11,8 @@ import (
 
 	"dyego0/assert"
 	"dyego0/ast"
+	"dyego0/location"
 	"dyego0/scanner"
-	"dyego0/tokens"
 )
 
 var _ = Describe("parser", func() {
@@ -237,8 +237,8 @@ var _ = Describe("parser", func() {
 			Expect(ok).To(Equal(true))
 			Expect(t.Text()).To(Equal("a"))
 			Expect(l.Member().Text()).To(Equal("b"))
-			Expect(l.Start()).To(Equal(tokens.Pos(0)))
-			Expect(l.End()).To(Equal(tokens.Pos(3)))
+			Expect(l.Start()).To(Equal(location.Pos(0)))
+			Expect(l.End()).To(Equal(location.Pos(3)))
 		})
 		It("can parse a call", func() {
 			na := func(e ast.Element) ast.NamedArgument {

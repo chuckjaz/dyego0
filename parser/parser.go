@@ -5,6 +5,7 @@ import (
 
 	"dyego0/assert"
 	"dyego0/ast"
+	"dyego0/location"
 	"dyego0/scanner"
 	"dyego0/tokens"
 )
@@ -229,7 +230,7 @@ func (p *parser) firstOf(options ...func() ast.Element) ast.Element {
 	preserved := p.preserve()
 	firstErrorIndex := len(p.errors)
 	var longestErrorOption *parser
-	longestErrorEnd := tokens.Pos(0)
+	longestErrorEnd := location.Pos(0)
 	var errorResult ast.Element
 	for _, option := range options {
 		result := option()
@@ -254,7 +255,7 @@ func (p *parser) firstOfArray(options ...func() []ast.Element) []ast.Element {
 	preserved := p.preserve()
 	firstErrorIndex := len(p.errors)
 	var longestErrorOption *parser
-	longestErrorEnd := tokens.Pos(0)
+	longestErrorEnd := location.Pos(0)
 	var errorResult []ast.Element
 	for _, option := range options {
 		result := option()

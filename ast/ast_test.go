@@ -8,8 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"dyego0/ast"
-    "dyego0/location"
-	"dyego0/tokens"
+	"dyego0/location"
 )
 
 func s(a interface{}) string {
@@ -328,10 +327,10 @@ var _ = Describe("ast", func() {
 			Expect(s(l)).To(Equal("Error(Location(0-1), message: message)"))
 		})
 		It("DirectError", func() {
-			l := b.DirectError(tokens.Pos(1), tokens.Pos(2), "message")
+			l := b.DirectError(location.Pos(1), location.Pos(2), "message")
 			Expect(l.Message()).To(Equal("message"))
-			Expect(l.Start()).To(Equal(tokens.Pos(1)))
-			Expect(l.End()).To(Equal(tokens.Pos(2)))
+			Expect(l.Start()).To(Equal(location.Pos(1)))
+			Expect(l.End()).To(Equal(location.Pos(2)))
 			Expect(s(l)).To(Equal("Error(Location(1-2), message: message)"))
 		})
 	})
@@ -344,19 +343,19 @@ var _ = Describe("ast", func() {
 			l.end = 15
 			b.PushContext()
 			n := b.Name("name")
-			Expect(n.Start()).To(Equal(tokens.Pos(10)))
-			Expect(n.End()).To(Equal(tokens.Pos(15)))
+			Expect(n.Start()).To(Equal(location.Pos(10)))
+			Expect(n.End()).To(Equal(location.Pos(15)))
 			Expect(n.Length()).To(Equal(5))
 			b.PopContext()
 			n = b.Name("name")
-			Expect(n.Start()).To(Equal(tokens.Pos(0)))
-			Expect(n.End()).To(Equal(tokens.Pos(15)))
+			Expect(n.Start()).To(Equal(location.Pos(0)))
+			Expect(n.End()).To(Equal(location.Pos(15)))
 			l.start = 20
 			l.end = 30
 			b.PushContext()
 			n = b.Name("name")
-			Expect(n.Start()).To(Equal(tokens.Pos(20)))
-			Expect(n.End()).To(Equal(tokens.Pos(30)))
+			Expect(n.Start()).To(Equal(location.Pos(20)))
+			Expect(n.End()).To(Equal(location.Pos(30)))
 			b.PopContext()
 			b.PopContext()
 		})
@@ -373,8 +372,8 @@ var _ = Describe("ast", func() {
 			b.PushContext()
 			bn := b.Name("b")
 			cn := c.Name("c")
-			Expect(bn.Start()).To(Equal(tokens.Pos(100)))
-			Expect(cn.Start()).To(Equal(tokens.Pos(0)))
+			Expect(bn.Start()).To(Equal(location.Pos(100)))
+			Expect(cn.Start()).To(Equal(location.Pos(0)))
 		})
 	})
 	Describe("String()'s", func() {
@@ -398,14 +397,14 @@ var _ = Describe("ast", func() {
 })
 
 type BuilderContext struct {
-	start, end tokens.Pos
+	start, end location.Pos
 }
 
-func (b BuilderContext) Start() tokens.Pos {
+func (b BuilderContext) Start() location.Pos {
 	return b.start
 }
 
-func (b BuilderContext) End() tokens.Pos {
+func (b BuilderContext) End() location.Pos {
 	return b.end
 }
 

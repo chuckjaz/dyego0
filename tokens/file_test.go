@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"dyego0/location"
 	"dyego0/tokens"
 
 	. "github.com/onsi/ginkgo"
@@ -11,12 +12,6 @@ import (
 )
 
 var _ = Describe("file", func() {
-	It("can report an invalid position", func() {
-		Expect(tokens.Pos(-1).IsValid()).To(BeFalse())
-	})
-	It("can report a valid position", func() {
-		Expect(tokens.Pos(100).IsValid()).To(BeTrue())
-	})
 	It("can create a file set", func() {
 		fs := tokens.NewFileSet()
 		Expect(fs).To(Not(BeNil()))
@@ -61,7 +56,7 @@ var _ = Describe("file", func() {
 	It("can convert a Pos to a Position", func() {
 		fs := tokens.NewFileSet()
 		var files []tokens.File
-		var positions []tokens.Pos
+		var positions []location.Pos
 		for i := 0; i < 10; i++ {
 			fb := fs.BuildFile("somefile"+strconv.Itoa(i), 1000)
 			for l := 0; l < 10; l++ {
@@ -86,7 +81,7 @@ var _ = Describe("file", func() {
 		fs := tokens.NewFileSet()
 		var builders []tokens.FileBuilder
 		files := make([]tokens.File, 10)
-		positions := make([]tokens.Pos, 10)
+		positions := make([]location.Pos, 10)
 		for i := 0; i < 10; i++ {
 			fb := fs.BuildFile("somefile"+strconv.Itoa(i), 1000)
 			for l := 0; l < 10; l++ {
@@ -117,10 +112,10 @@ var _ = Describe("file", func() {
 	})
 	It("can report an out of bound file", func() {
 		fs := tokens.NewFileSet()
-		Expect(fs.Position(tokens.Pos(10)).IsValid()).To(BeFalse())
+		Expect(fs.Position(location.Pos(10)).IsValid()).To(BeFalse())
 		fb := fs.BuildFile("somefile", 1000)
 		fb.Build()
-		position := fs.Position(tokens.Pos(-1))
+		position := fs.Position(location.Pos(-1))
 		Expect(position.IsValid()).To(BeFalse())
 		Expect(position.String()).To(Equal("invalid"))
 	})
@@ -130,9 +125,9 @@ var _ = Describe("file", func() {
 		fb.AddLine(10)
 		fb.AddLine(20)
 		f := fb.Build()
-		Expect(f.Line(tokens.Pos(-100))).To(Equal(-1))
-		Expect(f.Line(tokens.Pos(2000))).To(Equal(-1))
-		Expect(f.Line(tokens.Pos(0))).To(Equal(1))
+		Expect(f.Line(location.Pos(-100))).To(Equal(-1))
+		Expect(f.Line(location.Pos(2000))).To(Equal(-1))
+		Expect(f.Line(location.Pos(0))).To(Equal(1))
 	})
 	It("can report an out of bound columns", func() {
 		fs := tokens.NewFileSet()
@@ -141,25 +136,25 @@ var _ = Describe("file", func() {
 		fb.AddLine(10)
 		fb.AddLine(20)
 		f := fb.Build()
-		Expect(f.Column(tokens.Pos(-100))).To(Equal(-1))
-		Expect(f.Column(tokens.Pos(2000))).To(Equal(-1))
-		Expect(f.Column(tokens.Pos(0))).To(Equal(1))
+		Expect(f.Column(location.Pos(-100))).To(Equal(-1))
+		Expect(f.Column(location.Pos(2000))).To(Equal(-1))
+		Expect(f.Column(location.Pos(0))).To(Equal(1))
 	})
 	It("can convert to an offset", func() {
 		fs := tokens.NewFileSet()
 		f0 := fs.BuildFile("somefile0", 1000).Build()
 		f1 := fs.BuildFile("somefile1", 1000).Build()
-		Expect(f0.Offset(tokens.Pos(500))).To(Equal(500))
-		Expect(f1.Offset(tokens.Pos(1500))).To(Equal(500))
+		Expect(f0.Offset(location.Pos(500))).To(Equal(500))
+		Expect(f1.Offset(location.Pos(1500))).To(Equal(500))
 	})
 	It("can get a pos from a file", func() {
 		fs := tokens.NewFileSet()
 		f0 := fs.BuildFile("somefile0", 1000).Build()
 		f1 := fs.BuildFile("somefile0", 1000).Build()
-		Expect(f0.Pos(500)).To(Equal(tokens.Pos(500)))
-		Expect(f1.Pos(500)).To(Equal(tokens.Pos(1500)))
-		Expect(f0.Pos(1500)).To(Equal(tokens.Pos(-1)))
-		Expect(f1.Pos(-1)).To(Equal(tokens.Pos(-1)))
+		Expect(f0.Pos(500)).To(Equal(location.Pos(500)))
+		Expect(f1.Pos(500)).To(Equal(location.Pos(1500)))
+		Expect(f0.Pos(1500)).To(Equal(location.Pos(-1)))
+		Expect(f1.Pos(-1)).To(Equal(location.Pos(-1)))
 	})
 	It("can get a file size", func() {
 		fs := tokens.NewFileSet()

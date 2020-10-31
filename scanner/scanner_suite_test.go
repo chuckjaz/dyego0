@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"dyego0/location"
 	"dyego0/scanner"
 	"dyego0/tokens"
 )
@@ -67,8 +68,8 @@ var _ = Describe("scanner", func() {
 			s := scanner.NewScanner(append([]byte(" a b c "), 0), 0, nil)
 			s.Next()
 			c := s.Clone()
-			Expect(s.Start()).To(Equal(tokens.Pos(1)))
-			Expect(s.End()).To(Equal(tokens.Pos(2)))
+			Expect(s.Start()).To(Equal(location.Pos(1)))
+			Expect(s.End()).To(Equal(location.Pos(2)))
 			Expect(s.Start()).To(Equal(c.Start()))
 			Expect(s.End()).To(Equal(c.End()))
 		})
@@ -112,11 +113,11 @@ var _ = Describe("scanner", func() {
 			s.Next()
 			Expect(s.NewLineLocation().IsValid()).To(BeFalse())
 			s.Next()
-			Expect(s.NewLineLocation()).To(Equal(tokens.Pos(4)))
+			Expect(s.NewLineLocation()).To(Equal(location.Pos(4)))
 			s.Next()
 			Expect(s.NewLineLocation().IsValid()).To(BeFalse())
 			s.Next()
-			Expect(s.NewLineLocation()).To(Equal(tokens.Pos(10)))
+			Expect(s.NewLineLocation()).To(Equal(location.Pos(10)))
 		})
 	})
 })
