@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"dyego0/ast"
-    "dyego0/location"
+	"dyego0/location"
 )
 
 var _ = Describe("walk", func() {

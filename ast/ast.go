@@ -1,8 +1,7 @@
 package ast
 
 import (
-    "dyego0/location"
-	"dyego0/tokens"
+	"dyego0/location"
 	"fmt"
 )
 
@@ -512,20 +511,20 @@ type Builder interface {
 	) VocabularyOperatorPrecedence
 	VocabularyEmbedding(name []Name) VocabularyEmbedding
 	Error(message string) Error
-	DirectError(start, end tokens.Pos, message string) Error
+	DirectError(start, end location.Pos, message string) Error
 	Clone(context BuilderContext) Builder
 	Loc() location.Location
 }
 
 // BuilderContext provides the source location for a Builder
 type BuilderContext interface {
-	Start() tokens.Pos
-	End() tokens.Pos
+	Start() location.Pos
+	End() location.Pos
 }
 
 type builderImpl struct {
 	context   BuilderContext
-	locations []tokens.Pos
+	locations []location.Pos
 }
 
 // NewBuilder makes an AST builder that can be used to make AST nodes
@@ -1735,7 +1734,7 @@ func (b *builderImpl) Error(message string) Error {
 	return &errorImpl{Location: b.Loc(), message: message}
 }
 
-func (b *builderImpl) DirectError(start, end tokens.Pos, message string) Error {
+func (b *builderImpl) DirectError(start, end location.Pos, message string) Error {
 	return &errorImpl{Location: location.NewLocation(start, end), message: message}
 }
 

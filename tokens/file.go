@@ -3,38 +3,31 @@ package tokens
 import (
 	"fmt"
 	"sort"
+
+	"dyego0/location"
 )
-
-// Pos is a unique source location information in a set of files encoded as an int.
-type Pos int
-
-// IsValid returns if the position is valid. Invalid Pos values are returned, for
-// example, if the request offset negative or past the end of the file.
-func (p Pos) IsValid() bool {
-	return p >= 0
-}
 
 // File access line column inforamtion for a source file
 type File interface {
 	// Column is the 1-based column of the given Pos the file
-	Column(p Pos) int
+	Column(p location.Pos) int
 
 	// FileName is the file name given when declared in the FileSet
 	FileName() string
 
 	// Line is the 1-based line of the given Pos in the file
-	Line(p Pos) int
+	Line(p location.Pos) int
 
 	// Offset is the 0-based offset into the file using UTF-8 encoding
-	Offset(p Pos) int
+	Offset(p location.Pos) int
 
 	// Calculate a Pos for the given 0-based offset using UTF-8 encoding
-	Pos(offset int) Pos
+	Pos(offset int) location.Pos
 
 	// Return a Position for the given Pos in the file. Position is an easier to use
 	// encoding of file position but is signficant larger than a Pos which is specialized
 	// int
-	Position(p Pos) Position
+	Position(p location.Pos) Position
 
 	// Give the size of the source file in UTF-8 encoding
 	Size() int
@@ -47,7 +40,7 @@ type FileBuilder interface {
 	AddLine(offset int)
 
 	// Pos calculates a Pos for the given 0-based offset using UTF-8 encoding.
-	Pos(offset int) Pos
+	Pos(offset int) location.Pos
 
 	// Build finalizes the definition of the File and returns the immutable File defined.
 	Build() File
@@ -64,7 +57,7 @@ type FileSet interface {
 	// and FileName of Pos for any file in the FileSet. Pos are only 4 bytes and allow
 	// efficient encoding of file/line/column information. The Position is significantly
 	// larger encoding of the same information.
-	Position(p Pos) Position
+	Position(p location.Pos) Position
 }
 
 // Position is an easier to use, but signficantly larger, encoding of a Pos that allows
@@ -129,11 +122,11 @@ func (fb *fileBuilder) AddLine(offset int) {
 	}
 }
 
-func (fb *fileBuilder) Pos(offset int) Pos {
+func (fb *fileBuilder) Pos(offset int) location.Pos {
 	if offset < 0 || offset > fb.size {
-		return Pos(-1)
+		return location.Pos(-1)
 	}
-	return Pos(fb.base + offset)
+	return location.Pos(fb.base + offset)
 }
 
 func (fb *fileBuilder) Build() File {
@@ -157,10 +150,10 @@ func (fs *fileSet) BuildFile(filename string, size int) FileBuilder {
 	return &fileBuilder{filename: filename, size: size, base: b, fileSet: fs, lines: lines{0}}
 }
 
-func (fs *fileSet) Position(p Pos) Position {
+func (fs *fileSet) Position(p location.Pos) Position {
 	l := len(fs.files)
 	if l == 0 {
-		return &position{pos: Pos(-1)}
+		return &position{pos: location.Pos(-1)}
 	}
 	index := fs.files.Search(int(p))
 	if index == l {
@@ -180,7 +173,7 @@ type file struct {
 	lines    lines
 }
 
-func (f *file) lineOf(p Pos) int {
+func (f *file) lineOf(p location.Pos) int {
 	o := int(p) - f.base
 	if o < 0 || o >= f.size {
 		return -2
@@ -197,15 +190,15 @@ func (f *file) lineOf(p Pos) int {
 	return line
 }
 
-func (f *file) linePos(p Pos) Pos {
+func (f *file) linePos(p location.Pos) location.Pos {
 	line := f.lineOf(p)
 	if line < 0 {
-		return Pos(-1)
+		return location.Pos(-1)
 	}
-	return Pos(f.lines[line] + f.base)
+	return location.Pos(f.lines[line] + f.base)
 }
 
-func (f *file) Column(p Pos) int {
+func (f *file) Column(p location.Pos) int {
 	lp := f.linePos(p)
 	if int(lp) < 0 {
 		return -1
@@ -217,25 +210,25 @@ func (f *file) FileName() string {
 	return f.filename
 }
 
-func (f *file) Line(p Pos) int {
+func (f *file) Line(p location.Pos) int {
 	return f.lineOf(p) + 1
 }
 
-func (f *file) Offset(p Pos) int {
+func (f *file) Offset(p location.Pos) int {
 	return int(p) - f.base
 }
 
-func (f *file) Pos(offset int) Pos {
+func (f *file) Pos(offset int) location.Pos {
 	if offset < 0 || offset > f.size {
-		return Pos(-1)
+		return location.Pos(-1)
 	}
-	return Pos(f.base + offset)
+	return location.Pos(f.base + offset)
 }
 
-func (f *file) Position(p Pos) Position {
+func (f *file) Position(p location.Pos) Position {
 	o := int(p) - f.base
 	if o < 0 || o > f.size {
-		return &position{file: f, pos: Pos(-1)}
+		return &position{file: f, pos: location.Pos(-1)}
 	}
 	return &position{file: f, pos: p}
 }
@@ -273,7 +266,7 @@ func (fs files) Insert(index int, file *file) files {
 
 type position struct {
 	file *file
-	pos  Pos
+	pos  location.Pos
 }
 
 func (p *position) FileName() string {
