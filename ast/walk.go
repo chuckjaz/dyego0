@@ -2,6 +2,7 @@ package ast
 
 import (
 	"dyego0/assert"
+	"dyego0/errors"
 )
 
 // Visitor is an AST visitor
@@ -117,7 +118,7 @@ func WalkChildren(element Element, visitor Visitor) bool {
 			return Walk(e.Name(), visitor)
 		case VocabularyEmbedding:
 			return walkNames(e.Name(), visitor)
-		case Error:
+		case errors.Error:
 			return true
 		default:
 			assert.Fail("Unknown element %#v", element)

@@ -5,6 +5,7 @@ import (
 
 	"dyego0/assert"
 	"dyego0/ast"
+	"dyego0/errors"
 	"dyego0/location"
 	"dyego0/scanner"
 	"dyego0/tokens"
@@ -12,7 +13,7 @@ import (
 
 // Parser parses text and returns an ast element
 type Parser interface {
-	Errors() []ast.Error
+	Errors() []errors.Error
 	Parse() ast.Element
 }
 
@@ -27,7 +28,7 @@ type parser struct {
 	scope             vocabularyScope
 	vocabulary        vocabulary
 	embeddingContext  *vocabularyEmbeddingContext
-	errors            []ast.Error
+	errors            []errors.Error
 }
 
 type separatorState int
@@ -74,12 +75,12 @@ func (p *parser) Parse() ast.Element {
 	return expr
 }
 
-func (p *parser) Errors() []ast.Error {
+func (p *parser) Errors() []errors.Error {
 	return p.errors
 }
 
-func (p *parser) report(msg string, args ...interface{}) ast.Error {
-	err := p.builder.Error(fmt.Sprintf(msg, args...))
+func (p *parser) report(msg string, args ...interface{}) errors.Error {
+	err := p.builder.Error(msg, args...)
 	errors := p.errors
 	l := len(errors)
 	if l == 0 || errors[l-1].Start() != err.Start() {
@@ -89,7 +90,7 @@ func (p *parser) report(msg string, args ...interface{}) ast.Error {
 }
 
 func (p *parser) reportElement(element ast.Element, msg string, args ...interface{}) ast.Element {
-	err := p.builder.DirectError(element.Start(), element.End(), fmt.Sprintf(msg, args...))
+	err := errors.New(element, msg, args...)
 	p.errors = append(p.errors, err)
 	return err
 }

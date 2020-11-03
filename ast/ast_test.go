@@ -323,15 +323,7 @@ var _ = Describe("ast", func() {
 		})
 		It("Error", func() {
 			l := b.Error("message")
-			Expect(l.Message()).To(Equal("message"))
-			Expect(s(l)).To(Equal("Error(Location(0-1), message: message)"))
-		})
-		It("DirectError", func() {
-			l := b.DirectError(location.Pos(1), location.Pos(2), "message")
-			Expect(l.Message()).To(Equal("message"))
-			Expect(l.Start()).To(Equal(location.Pos(1)))
-			Expect(l.End()).To(Equal(location.Pos(2)))
-			Expect(s(l)).To(Equal("Error(Location(1-2), message: message)"))
+			Expect(l.Error()).To(Equal("message"))
 		})
 	})
 	Describe("location", func() {

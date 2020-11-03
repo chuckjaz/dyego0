@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"dyego0/errors"
 	"dyego0/location"
 	"fmt"
 )
@@ -443,12 +444,6 @@ type VocabularyEmbedding interface {
 	IsVocabularyEmbedding() bool
 }
 
-// Error is a error node that should be reported
-type Error interface {
-	Element
-	Message() string
-}
-
 // Builder is a helper to build AST nodes that uses context typecially provided by a scanner to
 // initiazlier the location of AST nodes.
 type Builder interface {
@@ -510,8 +505,7 @@ type Builder interface {
 		relation OperatorPrecedenceRelation,
 	) VocabularyOperatorPrecedence
 	VocabularyEmbedding(name []Name) VocabularyEmbedding
-	Error(message string) Error
-	DirectError(start, end location.Pos, message string) Error
+	Error(message string, args ...interface{}) errors.Error
 	Clone(context BuilderContext) Builder
 	Loc() location.Location
 }
@@ -1717,25 +1711,8 @@ func (b *builderImpl) VocabularyEmbedding(name []Name) VocabularyEmbedding {
 	return &vocabularyEmbeddingImpl{Location: b.Loc(), name: name}
 }
 
-type errorImpl struct {
-	location.Location
-	message string
-}
-
-func (e *errorImpl) Message() string {
-	return e.message
-}
-
-func (e *errorImpl) String() string {
-	return fmt.Sprintf("Error(%s, message: %s)", e.Location, e.message)
-}
-
-func (b *builderImpl) Error(message string) Error {
-	return &errorImpl{Location: b.Loc(), message: message}
-}
-
-func (b *builderImpl) DirectError(start, end location.Pos, message string) Error {
-	return &errorImpl{Location: location.NewLocation(start, end), message: message}
+func (b *builderImpl) Error(message string, args ...interface{}) errors.Error {
+	return errors.New(b.Loc(), message, args...)
 }
 
 func (b *builderImpl) Clone(context BuilderContext) Builder {
