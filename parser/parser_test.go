@@ -11,6 +11,7 @@ import (
 
 	"dyego0/assert"
 	"dyego0/ast"
+	"dyego0/errors"
 	"dyego0/location"
 	"dyego0/scanner"
 )
@@ -909,7 +910,7 @@ func lineLenOf(lineMap []int, line int) int {
 	return lineMap[line] - lineMap[line-1]
 }
 
-func printErrors(errors []ast.Error, source string) {
+func printErrors(errors []errors.Error, source string) {
 	if errors != nil {
 		lineMap := lineMapOf(source)
 		for _, err := range errors {
@@ -921,7 +922,7 @@ func printErrors(errors []ast.Error, source string) {
 			if lineLength-col < errorLen {
 				errorLen = lineLength - col
 			}
-			println(fmt.Sprintf("%d:%d: %s", line, col, err.Message()))
+			println(fmt.Sprintf("%d:%d: %s", line, col, err.Error()))
 			if line < len(lineMap) {
 				println(source[lineMap[line-1] : lineMap[line]-1])
 			}
@@ -959,7 +960,7 @@ func expectErrors(text string, errors ...string) {
 loop:
 	for _, message := range errors {
 		for _, err := range p.Errors() {
-			if strings.Contains(err.Message(), message) {
+			if strings.Contains(err.Error(), message) {
 				continue loop
 			}
 		}
