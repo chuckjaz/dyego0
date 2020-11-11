@@ -5,7 +5,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io"
-	"testing"
 )
 
 var _ = Describe("modulesfiles", func() {
@@ -61,8 +60,3 @@ var _ = Describe("modulesfiles", func() {
 		Expect(err.Error()).To(Equal("Invalid file name ''"))
 	})
 })
-
-func TestModuleFileScope(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Errors Suite")
-}
