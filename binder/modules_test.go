@@ -23,5 +23,5 @@ var _ = Describe("modules", func() {
 
 func TestModules(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Errors Suite")
+	RunSpecs(t, "Binding Suite")
 }

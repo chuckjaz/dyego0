@@ -115,8 +115,7 @@ func identExtender(b byte) bool {
 func symbolExtender(b byte) bool {
 	switch b {
 	case '~', '!', '@', '#', '$', '%', '^', '&',
-		'-', '_', '+', '=', ',', '/', '?', '|',
-		':':
+		'-', '_', '+', '=', '/', '?', '|', ':':
 		return true
 	}
 	return false
