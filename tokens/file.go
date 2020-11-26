@@ -16,7 +16,11 @@ type File interface {
 	FileName() string
 
 	// Line is the 1-based line of the given Pos in the file
-	Line(p location.Pos) int
+	Line(pos location.Pos) int
+
+	// LineStart returns the 0 based offset of the start of the 1 based line. If the line is
+	// past the last line the offset is the size of the file.
+	LineStart(line int) int
 
 	// Offset is the 0-based offset into the file using UTF-8 encoding
 	Offset(p location.Pos) int
@@ -58,6 +62,9 @@ type FileSet interface {
 	// efficient encoding of file/line/column information. The Position is significantly
 	// larger encoding of the same information.
 	Position(p location.Pos) Position
+
+	// File returns the File associated with pos. If pos is invalid returns nil.
+	File(pos location.Pos) File
 }
 
 // Position is an easier to use, but signficantly larger, encoding of a Pos that allows
@@ -150,20 +157,31 @@ func (fs *fileSet) BuildFile(filename string, size int) FileBuilder {
 	return &fileBuilder{filename: filename, size: size, base: b, fileSet: fs, lines: lines{0}}
 }
 
-func (fs *fileSet) Position(p location.Pos) Position {
+func (fs *fileSet) File(pos location.Pos) File {
 	l := len(fs.files)
 	if l == 0 {
-		return &position{pos: location.Pos(-1)}
+		return nil
 	}
-	index := fs.files.Search(int(p))
+	if !pos.IsValid() {
+		return nil
+	}
+	index := fs.files.Search(int(pos))
 	if index == l {
 		index--
 	}
 	f := fs.files[index]
-	if f.base > int(p) && index > 0 {
+	if f.base > int(pos) && index > 0 {
 		f = fs.files[index-1]
 	}
-	return f.Position(p)
+	return f
+}
+
+func (fs *fileSet) Position(pos location.Pos) Position {
+	f := fs.File(pos)
+	if f == nil {
+		return &position{pos: location.Pos(-1)}
+	}
+	return f.Position(pos)
 }
 
 type file struct {
@@ -175,10 +193,16 @@ type file struct {
 
 func (f *file) lineOf(p location.Pos) int {
 	o := int(p) - f.base
-	if o < 0 || o >= f.size {
+	if o < 0 || o > f.size {
 		return -2
 	}
 	line := f.lines.Search(o)
+	if line == len(f.lines) && o < f.size {
+		return len(f.lines) - 1
+	}
+	if line >= len(f.lines) {
+		return len(f.lines)
+	}
 	ls := f.lines[line]
 	if ls > o {
 		if line > 0 {
@@ -194,6 +218,9 @@ func (f *file) linePos(p location.Pos) location.Pos {
 	line := f.lineOf(p)
 	if line < 0 {
 		return location.Pos(-1)
+	}
+	if line >= len(f.lines) {
+		return location.Pos(f.size)
 	}
 	return location.Pos(f.lines[line] + f.base)
 }
@@ -212,6 +239,17 @@ func (f *file) FileName() string {
 
 func (f *file) Line(p location.Pos) int {
 	return f.lineOf(p) + 1
+}
+
+func (f *file) LineStart(line int) int {
+	offset := line - 1
+	if offset < 0 {
+		return 0
+	}
+	if offset >= len(f.lines) {
+		return f.size
+	}
+	return f.lines[offset]
 }
 
 func (f *file) Offset(p location.Pos) int {
@@ -286,11 +324,13 @@ func (p *position) IsValid() bool {
 }
 
 func (p *position) String() string {
-	line := p.Line()
-	column := p.Column()
-	filename := p.FileName()
-	if filename != "" && line >= 0 && column >= 0 {
-		return fmt.Sprintf("%s:%d:%d", filename, line, column)
+	if p.pos.IsValid() {
+		line := p.Line()
+		column := p.Column()
+		filename := p.FileName()
+		if filename != "" && line >= 0 && column >= 0 {
+			return fmt.Sprintf("%s:%d:%d", filename, line, column)
+		}
 	}
 	return "invalid"
 }
