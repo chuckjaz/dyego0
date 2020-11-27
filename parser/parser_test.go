@@ -5,20 +5,21 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io/ioutil"
-	"sort"
 	"strings"
 	"testing"
 
 	"dyego0/assert"
 	"dyego0/ast"
+	"dyego0/diagnostics"
 	"dyego0/errors"
 	"dyego0/location"
 	"dyego0/scanner"
+	"dyego0/tokens"
 )
 
 var _ = Describe("parser", func() {
 	b := func() ast.Builder {
-		b := ast.NewBuilder(scan(""))
+		b := ast.NewBuilder(scan("", nil))
 		b.PushContext()
 		return b
 	}
@@ -854,8 +855,20 @@ var _ = Describe("parser", func() {
 	})
 })
 
-func scan(text string) *scanner.Scanner {
-	return scanner.NewScanner(append([]byte(text), 0), 0, nil)
+type source struct {
+	text string
+}
+
+func (s source) Source(filename string) diagnostics.Source {
+	return s
+}
+
+func (s source) Text(start, end int) string {
+	return s.text[start:end]
+}
+
+func scan(text string, fb tokens.FileBuilder) *scanner.Scanner {
+	return scanner.NewScanner(append([]byte(text), 0), 0, fb)
 }
 
 var dyego0VocabularySource = strings.ReplaceAll(`
@@ -876,66 +889,14 @@ let dyego = <|
   infix operator (@=@, @+=@, @*=@, @/=@, @%=@) right
 |>`, "@", "`")
 
-func lineMapOf(source string) []int {
-	result := []int{0}
-	for i, ch := range source {
-		if ch == '\n' {
-			result = append(result, i+1)
-		}
-	}
-	return append(result, len(source)+1)
-}
-
-func lineColumnOf(lineMap []int, offset int) (int, int) {
-	line0 := sort.SearchInts(lineMap, offset)
-	if lineMap[line0] != offset {
-		line0--
-	}
-	if line0 < len(lineMap) {
-		return line0 + 1, offset - lineMap[line0] + 1
-	} else if lineMap != nil {
-		return line0, offset - lineMap[line0-1] + 1
-	} else {
-		return 1, offset + 1
+func printErrors(errs []errors.Error, fs tokens.FileSet, text string) {
+	if errs != nil {
+		println(diagnostics.Format(errs, fs, source{text: text}))
 	}
 }
 
-func lineLenOf(lineMap []int, line int) int {
-	if lineMap == nil {
-		return 0
-	}
-	if line >= len(lineMap) {
-		return lineMap[len(lineMap)-1]
-	}
-	return lineMap[line] - lineMap[line-1]
-}
-
-func printErrors(errors []errors.Error, source string) {
-	if errors != nil {
-		lineMap := lineMapOf(source)
-		for _, err := range errors {
-			offset := int(err.Start())
-			endOffset := int(err.End())
-			line, col := lineColumnOf(lineMap, offset)
-			errorLen := endOffset - offset
-			lineLength := lineLenOf(lineMap, line)
-			if lineLength-col < errorLen {
-				errorLen = lineLength - col
-			}
-			println(fmt.Sprintf("%d:%d: %s", line, col, err.Error()))
-			if line < len(lineMap) {
-				println(source[lineMap[line-1] : lineMap[line]-1])
-			}
-			println(fmt.Sprintf("%s%s", strings.Repeat(" ", col-1), strings.Repeat("^", errorLen)))
-		}
-	}
-}
-
-func parseVocabulary(source string) vocabulary {
-	p := NewParser(scan(source), newVocabularyScope())
-	element := p.Parse()
-	printErrors(p.Errors(), source)
-	assert.Assert(len(p.Errors()) == 0, "dyego0 vocabulary source has errors %#v", p.Errors())
+func parseVocabulary(source, filename string) vocabulary {
+	element := parseNamed(source, filename, newVocabularyScope())
 	let := element.(ast.LetDefinition)
 	vl := let.Value().(ast.VocabularyLiteral)
 	emptyScope := newVocabularyScope()
@@ -947,15 +908,35 @@ func parseVocabulary(source string) vocabulary {
 var defaultScope vocabularyScope
 
 func parse(text string) ast.Element {
-	p := NewParser(scan(text), defaultScope)
+	return parseNamed(text, "text", defaultScope)
+}
+
+func recordLines(fb tokens.FileBuilder, text string) {
+	for o, ch := range text {
+		if ch == '\n' {
+			fb.AddLine(o)
+		}
+	}
+}
+
+func parseNamed(text, filename string, scope vocabularyScope) ast.Element {
+	fs := tokens.NewFileSet()
+	fb := fs.BuildFile(filename, len(text))
+	p := NewParser(scan(text, fb), scope)
 	r := p.Parse()
-	printErrors(p.Errors(), text)
+	recordLines(fb, text)
+	fb.Build()
+	errs := p.Errors()
+	if errs != nil {
+		sf := source{text: text}
+		print(diagnostics.Format(errs, fs, sf))
+	}
 	Expect(p.Errors()).To(BeNil())
 	return r
 }
 
 func expectErrors(text string, errors ...string) {
-	p := NewParser(scan(text), defaultScope)
+	p := NewParser(scan(text, nil), defaultScope)
 	p.Parse()
 loop:
 	for _, message := range errors {
@@ -964,7 +945,7 @@ loop:
 				continue loop
 			}
 		}
-		printErrors(p.Errors(), text)
+		printErrors(p.Errors(), nil, text)
 		Fail(fmt.Sprintf("Expected '%s' to be included as an error", message))
 	}
 }
@@ -988,16 +969,16 @@ func readFile(name string) []byte {
 }
 
 func parseFile(name string) ast.Element {
-	return parse(string(readFile(name)))
+	return parseNamed(string(readFile(name)), name, defaultScope)
 }
 
-func TestErrors(t *testing.T) {
-	dyegoVocabulary := parseVocabulary(dyego0VocabularySource)
+func TestParser(t *testing.T) {
+	RegisterFailHandler(Fail)
+	dyegoVocabulary := parseVocabulary(dyego0VocabularySource, "test vocabulary")
 	scope := newVocabularyScope()
 	scope.members["dyego"] = dyegoVocabulary
 	scope.members["Dyego0"] = dyegoVocabulary
 	defaultScope = scope
 
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Errors Suite")
+	RunSpecs(t, "Parser Suite")
 }
