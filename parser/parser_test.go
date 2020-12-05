@@ -998,6 +998,7 @@ func TestParser(t *testing.T) {
 	scope := newVocabularyScope()
 	scope.members["dyego"] = dyegoVocabulary
 	scope.members["Dyego0"] = dyegoVocabulary
+	scope.members["Wasm"] = newVocabulary()
 	defaultScope = scope
 
 	RunSpecs(t, "Parser Suite")

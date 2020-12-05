@@ -8,16 +8,16 @@ import (
 )
 
 type enterVisitor struct {
-	scope  symbols.ScopeBuilder
-	errors []errors.Error
+	builder symbols.ScopeBuilder
+	errors  []errors.Error
 }
 
-func newEnterVisitor(scope symbols.ScopeBuilder) *enterVisitor {
-	return &enterVisitor{scope: scope}
+func newEnterVisitor(builder symbols.ScopeBuilder) *enterVisitor {
+	return &enterVisitor{builder: builder}
 }
 
 func (v *enterVisitor) enterSymbol(symbol symbols.Symbol, node ast.Element) {
-	_, ok := v.scope.Enter(symbol)
+	_, ok := v.builder.Enter(symbol)
 	if !ok {
 		v.errors = append(v.errors, errors.New(node, "Duplicate symbol"))
 	}
@@ -45,8 +45,8 @@ func isTypeDeclaration(declaration ast.LetDefinition) bool {
 }
 
 // Enter enters the types declared a the root of emement into the scope
-func (c *BindingContext) Enter(element ast.Element) {
-	v := newEnterVisitor(c.Scope)
+func (c *BindingContext) Enter(element ast.Element, builder symbols.ScopeBuilder) {
+	v := newEnterVisitor(builder)
 	v.Visit(element)
 	c.Errors = append(c.Errors, v.errors...)
 }

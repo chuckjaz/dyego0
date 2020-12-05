@@ -7,7 +7,7 @@ import (
 )
 
 // NewFilesModuleSourceScope creates a file path file module source scope
-func NewFilesModuleSourceScope(files []string, reader func(fileName string) (io.Reader, error)) (ModuleSourceScope, error) {
+func NewFilesModuleSourceScope(files []string, reader func(filename string) (io.Reader, error)) (ModuleSourceScope, error) {
 	result := newFilesScope()
 	for _, file := range files {
 		names := splitName(noExt(file))
@@ -26,8 +26,8 @@ func NewFilesModuleSourceScope(files []string, reader func(fileName string) (io.
 
 type fileModule struct {
 	name     string
-	fileName string
-	reader   func(fileName string) (io.Reader, error)
+	filename string
+	reader   func(filename string) (io.Reader, error)
 }
 
 func (f *fileModule) Name() string {
@@ -35,11 +35,11 @@ func (f *fileModule) Name() string {
 }
 
 func (f *fileModule) FileName() string {
-	return f.fileName
+	return f.filename
 }
 
 func (f *fileModule) NewReader() (io.Reader, error) {
-	file, err := f.reader(f.fileName)
+	file, err := f.reader(f.filename)
 	return file, err
 }
 
@@ -68,13 +68,13 @@ func newFilesScope() *filesScope {
 	return &filesScope{files: make(map[string]*fileModule), scopes: make(map[string]*filesScope)}
 }
 
-func (s *filesScope) populate(fileName string, reader func(fileName string) (io.Reader, error), dir []string, name string) error {
+func (s *filesScope) populate(filename string, reader func(filename string) (io.Reader, error), dir []string, name string) error {
 	if len(dir) == 0 {
 		_, ok := s.files[name]
 		if ok {
-			return fmt.Errorf("Duplicate file '%s'", fileName)
+			return fmt.Errorf("Duplicate file '%s'", filename)
 		}
-		s.files[name] = &fileModule{name: name, fileName: fileName, reader: reader}
+		s.files[name] = &fileModule{name: name, filename: filename, reader: reader}
 		return nil
 	}
 	scopeName := dir[0]
@@ -83,13 +83,13 @@ func (s *filesScope) populate(fileName string, reader func(fileName string) (io.
 		scope = newFilesScope()
 		s.scopes[scopeName] = scope
 	}
-	return scope.populate(fileName, reader, dir[1:], name)
+	return scope.populate(filename, reader, dir[1:], name)
 }
 
-func splitName(fileName string) []string {
+func splitName(filename string) []string {
 	var result []string
 
-	current := fileName
+	current := filename
 	for current != "/" && current != "." && current != "" {
 		base, name := path.Split(current)
 		var empty []string
@@ -103,7 +103,7 @@ func splitName(fileName string) []string {
 	return result
 }
 
-func noExt(fileName string) string {
-	ext := path.Ext(fileName)
-	return fileName[0 : len(fileName)-len(ext)]
+func noExt(filename string) string {
+	ext := path.Ext(filename)
+	return filename[0 : len(filename)-len(ext)]
 }

@@ -8,7 +8,7 @@ import (
 // BindingContext is a context for binding symbols
 type BindingContext struct {
 	// Scope is the root scope of the context
-	Scope symbols.ScopeBuilder
+	Scope symbols.Scope
 
 	// Errors is the errors reported during binding
 	Errors []errors.Error
@@ -16,5 +16,5 @@ type BindingContext struct {
 
 // NewContext creates a new binding context
 func NewContext() *BindingContext {
-	return &BindingContext{Scope: symbols.NewBuilder()}
+	return &BindingContext{}
 }

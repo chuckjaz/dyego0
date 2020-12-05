@@ -4,6 +4,15 @@ import (
 	"io"
 )
 
+// ModuleSourceScope is a scope for finding module sources
+type ModuleSourceScope interface {
+	// FindScope finds a subscope of a module scope
+	FindScope(name string) (ModuleSourceScope, error)
+
+	// Find a source module in a scope
+	Find(name string) (ModuleSource, error)
+}
+
 // ModuleSource is a source file for a module
 type ModuleSource interface {
 	// Name is the name the module that appears in the scope
@@ -19,15 +28,6 @@ type ModuleSource interface {
 // NewModuleSource creates a new ModuleSource
 func NewModuleSource(name string, fileName string, readFactory func() (io.Reader, error)) ModuleSource {
 	return &moduleSource{name: name, fileName: fileName, readFactory: readFactory}
-}
-
-// ModuleSourceScope is a scope for finding module sources
-type ModuleSourceScope interface {
-	// FindScope finds a subscope of a module scope
-	FindScope(name string) (ModuleSourceScope, error)
-
-	// Find a source module in a scope
-	Find(name string) (ModuleSource, error)
 }
 
 type moduleSource struct {

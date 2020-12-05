@@ -6,6 +6,7 @@ import (
 	"dyego0/diagnostics"
 	"dyego0/parser"
 	"dyego0/scanner"
+	"dyego0/symbols"
 	"dyego0/tokens"
 
 	. "github.com/onsi/ginkgo"
@@ -13,21 +14,21 @@ import (
 )
 
 var _ = Describe("enter", func() {
-	It("should be able to enter a single type", func() {
+	enter := func(text string) symbols.Scope {
 		context := binder.NewContext()
-		element := parse("let a = < a: Int >")
-		context.Enter(element)
+		element := parse(text)
+		builder := symbols.NewBuilder()
+		context.Enter(element, builder)
 		Expect(len(context.Errors)).To(Equal(0))
-		scope := context.Scope.Build()
+		return builder.Build()
+	}
+	It("should be able to enter a single type", func() {
+		scope := enter("let a = < a: Int >")
 		_, ok := scope.Find("a")
 		Expect(ok).To(BeTrue())
 	})
 	It("should be able to enter multiple types", func() {
-		context := binder.NewContext()
-		element := parse("let a = < a: Int >, let b = < b: Int >")
-		context.Enter(element)
-		Expect(context.Errors).To(BeNil())
-		scope := context.Scope.Build()
+		scope := enter("let a = < a: Int >, let b = < b: Int >")
 		_, ok := scope.Find("a")
 		Expect(ok).To(BeTrue())
 		_, ok = scope.Find("b")
@@ -36,7 +37,8 @@ var _ = Describe("enter", func() {
 	It("should detect a duplicate symbol", func() {
 		context := binder.NewContext()
 		element := parse("let a = < a: Int >, let a = < b: Int >")
-		context.Enter(element)
+		builder := symbols.NewBuilder()
+		context.Enter(element, builder)
 		Expect(len(context.Errors)).To(Equal(1))
 		Expect(context.Errors[0].Error()).To(Equal("Duplicate symbol"))
 	})
