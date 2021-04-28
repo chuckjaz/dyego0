@@ -1,4 +1,4 @@
-package binder
+package sources
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"path"
 )
 
-// NewFilesModuleSourceScope creates a file path file module source scope
-func NewFilesModuleSourceScope(files []string, reader func(filename string) (io.Reader, error)) (ModuleSourceScope, error) {
+// NewFilesSourceReaderScope creates a file path file module source scope
+func NewSourceFileReaderScope(files []string, reader func(filename string) (io.Reader, error)) (SourceReaderScope, error) {
 	result := newFilesScope()
 	for _, file := range files {
 		names := splitName(noExt(file))
@@ -24,31 +24,31 @@ func NewFilesModuleSourceScope(files []string, reader func(filename string) (io.
 	return result, nil
 }
 
-type fileModule struct {
+type fileReader struct {
 	name     string
 	filename string
 	reader   func(filename string) (io.Reader, error)
 }
 
-func (f *fileModule) Name() string {
+func (f *fileReader) Name() string {
 	return f.name
 }
 
-func (f *fileModule) FileName() string {
+func (f *fileReader) FileName() string {
 	return f.filename
 }
 
-func (f *fileModule) NewReader() (io.Reader, error) {
+func (f *fileReader) NewReader() (io.Reader, error) {
 	file, err := f.reader(f.filename)
 	return file, err
 }
 
 type filesScope struct {
-	files  map[string]*fileModule
+	files  map[string]*fileReader
 	scopes map[string]*filesScope
 }
 
-func (s *filesScope) Find(name string) (ModuleSource, error) {
+func (s *filesScope) Find(name string) (SourceReader, error) {
 	file, ok := s.files[name]
 	if !ok {
 		return nil, fmt.Errorf("File '%s' not found", name)
@@ -56,7 +56,7 @@ func (s *filesScope) Find(name string) (ModuleSource, error) {
 	return file, nil
 }
 
-func (s *filesScope) FindScope(name string) (ModuleSourceScope, error) {
+func (s *filesScope) FindScope(name string) (SourceReaderScope, error) {
 	scope, ok := s.scopes[name]
 	if !ok {
 		return nil, fmt.Errorf("Directory '%s' not found", name)
@@ -65,7 +65,7 @@ func (s *filesScope) FindScope(name string) (ModuleSourceScope, error) {
 }
 
 func newFilesScope() *filesScope {
-	return &filesScope{files: make(map[string]*fileModule), scopes: make(map[string]*filesScope)}
+	return &filesScope{files: make(map[string]*fileReader), scopes: make(map[string]*filesScope)}
 }
 
 func (s *filesScope) populate(filename string, reader func(filename string) (io.Reader, error), dir []string, name string) error {
@@ -74,7 +74,7 @@ func (s *filesScope) populate(filename string, reader func(filename string) (io.
 		if ok {
 			return fmt.Errorf("Duplicate file '%s'", filename)
 		}
-		s.files[name] = &fileModule{name: name, filename: filename, reader: reader}
+		s.files[name] = &fileReader{name: name, filename: filename, reader: reader}
 		return nil
 	}
 	scopeName := dir[0]

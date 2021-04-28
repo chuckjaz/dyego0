@@ -1,23 +1,23 @@
-package binder_test
+package sources_test
 
 import (
-	"dyego0/binder"
+	"dyego0/sources"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"io"
 )
 
-var _ = Describe("modulesfiles", func() {
+var _ = Describe("sourcefilereaderss", func() {
 	emptyReader := func(fileName string) (io.Reader, error) {
 		return nil, nil
 	}
 	It("can create a file mdule scope", func() {
-		scope, err := binder.NewFilesModuleSourceScope(nil, emptyReader)
+		scope, err := sources.NewSourceFileReaderScope(nil, emptyReader)
 		Expect(scope).To(Not(BeNil()))
 		Expect(err).To(BeNil())
 	})
 	It("can create and use a scope with files", func() {
-		root, err := binder.NewFilesModuleSourceScope([]string{
+		root, err := sources.NewSourceFileReaderScope([]string{
 			"a/b/c.go",
 			"a/b/d.go",
 			"a/e/g.go",
@@ -45,7 +45,7 @@ var _ = Describe("modulesfiles", func() {
 		Expect(err).To(Not(BeNil()))
 	})
 	It("reports duplicate files", func() {
-		_, err := binder.NewFilesModuleSourceScope([]string{
+		_, err := sources.NewSourceFileReaderScope([]string{
 			"a/b/c.go",
 			"a/b/c.go",
 		}, emptyReader)
@@ -53,7 +53,7 @@ var _ = Describe("modulesfiles", func() {
 		Expect(err.Error()).To(Equal("Duplicate file 'a/b/c.go'"))
 	})
 	It("reports invalid file", func() {
-		_, err := binder.NewFilesModuleSourceScope([]string{
+		_, err := sources.NewSourceFileReaderScope([]string{
 			"",
 		}, emptyReader)
 		Expect(err).To(Not(BeNil()))
