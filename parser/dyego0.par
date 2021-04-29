@@ -23,6 +23,9 @@ arguments:                          argument (COMMA argument)* [COMMA]
 argument:                           NAME EQ expression |
                                     expression |
                                     SPLAT expression
+if-expression:                      IF LPAREN expression RPAREN
+                                        LBRACE sequence RBRACE [ELSE
+                                        LBRACE sequence RBRACE]
 when-expression:                    WHEN LPAREN expression RPAREN LBRACK when-clause (COMMA when-clause)* [COMMA] RBRACK
 when-clause:                        expression ARROW LBRACK sequence RBRACK |
                                     ELSE ARROW LBRACK sequence RBRACK

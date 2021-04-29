@@ -110,23 +110,20 @@ let render = { t: Double ->
         }
         val obj = scene[t]
         val ret = intersectSphere(ray, obj.center, obj.radius)
-        when {
-          ret.hit -> {
-            hitSphere = obj
-            isHit = true
-            tval = ret.tval
-          }
+        if(ret.hit) {
+          hitSphere = obj
+          isHit = true
+          tval = ret.tval
         }
         t = t + 1
       }
-      when {
-        isHit -> {
-          print(lut[shadePixel(ray, hitSphere, tval)])
-        }
-        else -> {
-          print(" ")
-        }
+      if(isHit) {
+        print(lut[shadePixel(ray, hitSphere, tval)])
       }
+      else {
+        print(" ")
+      }
+
       i = i + 1
     }
     print("/n")
@@ -149,24 +146,18 @@ let HitPoint = <
 let intersectSphere = {ray: Ray, center: Vector, radius: Double ->
   val l = center - ray.origin
   val tca = l dot ray.direction
-  when {
-    tca < 0.0 -> {
-      return [hit: false, tval: -1.0]
-    }
+  if(tca < 0.0) {
+    return [hit: false, tval: -1.0]
   }
   val d2 = (l dot l) - tca * tca
   val r2 = radius * radius
-  when {
-    d2 > r2 -> {
-      return [hit: false, tval: -1.0]
-    }
+  if(d2 > r2) {
+    return [hit: false, tval: -1.0]
   }
   val thc = (r2 - d2).sqrt()
   val t0 = tca - tch
-  when {
-    t0 > 1000.0 -> {
-      return [hit: false, tval: -1.0]
-    }
+  if(t0 > 1000.0) {
+    return [hit: false, tval: -1.0]
   }
   return [hit: true, tval: t0]
 }

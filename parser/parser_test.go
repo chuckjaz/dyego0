@@ -2,11 +2,12 @@ package parser
 
 import (
 	"fmt"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"dyego0/assert"
 	"dyego0/ast"
@@ -168,7 +169,7 @@ var _ = Describe("parser", func() {
 			})
 		})
 	})
-	Describe("object initializer", func() {
+	Describe("array initializer", func() {
 		arr := func(text string) ast.ArrayInitializer {
 			r := parse(text)
 			o, ok := r.(ast.ArrayInitializer)
@@ -481,6 +482,16 @@ var _ = Describe("parser", func() {
                   a > b -> { break }
                 }
             `)
+		})
+		It("can parse an if expression, no else", func() {
+			parse(`...dyego
+				if(a > b) { break }
+			`)
+		})
+		It("can parse an if/else expression", func() {
+			parse(`...dyego
+				if (a > b) { break } else { continue }
+			`)
 		})
 	})
 	Describe("types", func() {
