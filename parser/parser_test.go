@@ -425,6 +425,15 @@ var _ = Describe("parser", func() {
 			Expect(ok).To(BeTrue())
 			expectName(l.Label(), "loop")
 		})
+		It("can parse a while statement", func() {
+			_, ok := parse("while(true) { 1 }").(ast.Loop)
+			Expect(ok).To(BeTrue())
+		})
+		It("can parse a named while statement", func() {
+			l, ok := parse("while while (true) { 1 }").(ast.Loop)
+			Expect(ok).To(BeTrue())
+			expectName(l.Label(), "while")
+		})
 		It("can parse break", func() {
 			_, ok := parse("break").(ast.Break)
 			Expect(ok).To(BeTrue())

@@ -649,13 +649,13 @@ loop:
 					}
 				}
 			case 'w':
-				// where
 				switch src[offset] {
 				case 'h':
 					switch src[offset+1] {
 					case 'e':
 						switch src[offset+2] {
 						case 'n':
+							// ehrn
 							if !identExtender(src[offset+3]) {
 								offset += 3
 								result = tokens.Identifier
@@ -664,6 +664,7 @@ loop:
 								break loop
 							}
 						case 'r':
+							// where
 							if src[offset+3] == 'e' && !identExtender(src[offset+4]) {
 								offset += 4
 								result = tokens.Identifier
@@ -671,6 +672,16 @@ loop:
 								s.value = "where"
 								break loop
 							}
+						}
+					case 'i':
+						// while
+						if src[offset+2] == 'l' && src[offset+3] == 'e' &&
+							!identExtender(src[offset+4]) {
+							offset += 4
+							result = tokens.Identifier
+							s.pseudo = tokens.While
+							s.value = "while"
+							break loop
 						}
 					}
 				}
