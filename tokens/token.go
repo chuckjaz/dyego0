@@ -190,6 +190,9 @@ const (
 	// Identifiers is a pseudo token "identifiers"
 	Identifiers
 
+	// If is a pseudo token "if"
+	If
+
 	// Infix is the pseudo token "infix"
 	Infix
 
@@ -296,6 +299,7 @@ var pseudoTokens = [...]string{
 	Continue:         "continue",
 	Else:             "else",
 	Identifiers:      "identifiers",
+	If:               "if",
 	Infix:            "infix",
 	Left:             "left",
 	Loop:             "loop",

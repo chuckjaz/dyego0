@@ -619,6 +619,34 @@ func (p *parser) namedArgument() ast.Element {
 	return p.builder.NamedArgument(name, value)
 }
 
+func (p *parser) ifExpression() ast.When {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	p.expectPseudo(tokens.If)
+	p.expect(tokens.LParen)
+	target := p.expression()
+	var clauses []ast.Element
+	p.expect(tokens.RParen)
+	{
+		p.builder.PushContext()
+		defer p.builder.PopContext()
+		p.expect(tokens.LBrace)
+		thenPart := p.sequence()
+		p.expect(tokens.RBrace)
+		clauses = append(clauses, p.builder.WhenValueClause(target, thenPart))
+	}
+	if p.pseudo == tokens.Else {
+		p.builder.PushContext()
+		defer p.builder.PopContext()
+		p.expectPseudo(tokens.Else)
+		p.expect(tokens.LBrace)
+		elsePart := p.sequence()
+		p.expect(tokens.RBrace)
+		clauses = append(clauses, p.builder.WhenElseClause(elsePart))
+	}
+	return p.builder.When(nil, clauses)
+}
+
 func (p *parser) whenExpression() ast.When {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
@@ -911,6 +939,8 @@ func (p *parser) primitive() ast.Element {
 		return result
 	case tokens.Identifier:
 		switch p.pseudo {
+		case tokens.If:
+			return p.ifExpression()
 		case tokens.When:
 			return p.whenExpression()
 		}

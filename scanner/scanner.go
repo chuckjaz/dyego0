@@ -506,6 +506,14 @@ loop:
 						s.value = "identifiers"
 						break loop
 					}
+				case 'f':
+					if !identExtender(src[offset+1]) {
+						offset++
+						result = tokens.Identifier
+						s.pseudo = tokens.If
+						s.value = "if"
+						break loop
+					}
 				case 'n':
 					switch src[offset+1] {
 					case 'f':
