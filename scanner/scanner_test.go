@@ -163,7 +163,7 @@ func TestPseudoWords(t *testing.T) {
 		tokens.After, tokens.Before, tokens.Break, tokens.Continue, tokens.Else,
 		tokens.If, tokens.Infix, tokens.Identifiers, tokens.Left, tokens.Loop,
 		tokens.Operator, tokens.Postfix, tokens.Prefix, tokens.Right,
-		tokens.When, tokens.Where,
+		tokens.When, tokens.Where, tokens.While,
 	)
 }
 

@@ -318,6 +318,8 @@ func (p *parser) sequence() ast.Element {
 			left = p.continueStatement()
 		case tokens.Loop:
 			left = p.loopStatement()
+		case tokens.While:
+			left = p.whileStatement()
 		default:
 			left = p.expression()
 		}
@@ -1588,6 +1590,36 @@ func (p *parser) loopStatement() ast.Loop {
 	body := p.sequence()
 	p.expect(tokens.RBrace)
 	return p.builder.Loop(label, body)
+}
+
+func (p *parser) whileStatement() ast.Loop {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
+	var label ast.Name
+	p.expectPseudo(tokens.While)
+	if p.current == tokens.Identifier {
+		label = p.expectIdent()
+	}
+	p.expect(tokens.LParen)
+	test := p.expression()
+	p.expect(tokens.RParen)
+	p.expect(tokens.LBrace)
+	body := p.sequence()
+	p.expect(tokens.RBrace)
+
+	// build test expression
+	bodyWithTest :=
+		p.builder.When(
+			nil,
+			[]ast.Element{
+				p.builder.WhenValueClause(test, body),
+				p.builder.WhenElseClause(
+					p.builder.Break(label),
+				),
+			},
+		)
+
+	return p.builder.Loop(label, bodyWithTest)
 }
 
 func (p *parser) breakStatement() ast.Break {

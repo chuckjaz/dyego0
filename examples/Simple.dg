@@ -83,16 +83,10 @@ let render = { t: Double ->
   val fw = w.toDouble()
   val fh = h.ToDouble()
   val scene = spheres(:t)
-  loop {
-    when {
-      j >= h -> { break }
-    }
+  while(j < h) {
     val jf = j.toDouble()
     var i = 0
-    loop {
-      when {
-        i >= w -> { break }
-      }
+    while(i < w) {
       var fi = i.toDouble()
       var ray = [<Ray>
         origin: [x: 1.5, y: 1.7, z: -5.5]
@@ -104,10 +98,7 @@ let render = { t: Double ->
       var tval = 0.0
 
       var t = 0
-      loop {
-        when {
-          i >= 3 -> { break }
-        }
+      while(i < 3) {
         val obj = scene[t]
         val ret = intersectSphere(ray, obj.center, obj.radius)
         if(ret.hit) {
@@ -178,12 +169,7 @@ let diffuseShading = { p1: Vector, obj: Sphere, light: Light ->
 }
 
 var t = 0.0
-loop {
-  when {
-    t >= 1.0 -> {
-      break
-    }
-  }
+while(t < 1.0) {
   render(t)
   t = t + 0.2
 }

@@ -220,6 +220,9 @@ const (
 	// Where is a pseudo token "where"
 	Where
 
+	// While is a pseudo token "while"
+	While
+
 	// Add '+'
 	Add
 
@@ -309,6 +312,7 @@ var pseudoTokens = [...]string{
 	Right:            "right",
 	When:             "when",
 	Where:            "where",
+	While:            "while",
 	Add:              "+",
 	And:              "&",
 	Bar:              "|",

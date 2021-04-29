@@ -3,6 +3,7 @@ compilation-unit:                   sequence
 sequence:                           sequencePart (COMMA sequencePart)* [COMMA]
 sequencePart:                       SPREAD (vocabularyReference | expression) |
                                     loop-statement |
+                                    while-statement |
                                     break-statement |
                                     continue-statement |
                                     return-statement |
@@ -101,6 +102,8 @@ destructor-fields:                  destructure-field (COMMA destructure-field)*
 destructor-field:                   [VAR|LET] NAME [as NAME] [COLON type-reference]
 
 loop-statement:                     LOOP [NAME] LBRACE sequence RBRACE
+while-statement:                    WHILE [NAME] LPAREN expression RPAREN 
+                                        LBRACE sequence RBRACE
 break-statement:                    BREAK [NAME]
 continue-statement:                 CONTINUE [NAME]
 return-statement:                   RETURN expression
