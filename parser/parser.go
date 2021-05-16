@@ -1166,7 +1166,7 @@ func (p *parser) typeLiteralMember() ast.Element {
 		} else {
 			value = p.expression()
 		}
-		return p.builder.TypeLiteralConstant(name, value)
+		return p.builder.LetDefinition(name, value)
 	default:
 		return p.expects(tokens.Colon)
 	}
@@ -1189,25 +1189,13 @@ func (p *parser) definition() ast.Element {
 	switch p.current {
 	case tokens.Let:
 		p.next()
-		name := p.definitionName()
+		name := p.expectIdent()
 		p.expectPseudo(tokens.Equal)
 		value := p.letValue()
 		return p.builder.LetDefinition(name, value)
 	default:
 		return p.expects(tokens.Let, tokens.Var)
 	}
-}
-
-func (p *parser) definitionName() ast.Element {
-	p.builder.PushContext()
-	defer p.builder.PopContext()
-	var result ast.Element = p.expectIdent()
-	for p.current == tokens.Dot {
-		p.next()
-		name := p.expectIdent()
-		result = p.builder.Selection(result, name)
-	}
-	return result
 }
 
 func (p *parser) letValue() ast.Element {

@@ -19,6 +19,9 @@ type Scope interface {
 
 // ScopeBuilder is used to build a scope.
 type ScopeBuilder interface {
+	// Find finds a symbol previously entered.
+	Find(name string) (Symbol, bool)
+
 	// Enter enters a symbol into scope, Returns the symbol and true if it not already in the table
 	// or the prevoius symbol and false, it the symbol already exists.
 	Enter(symbol Symbol) (Symbol, bool)
@@ -60,6 +63,11 @@ func newScope(table map[string]Symbol) Scope {
 type scopeBuilder struct {
 	base  Scope
 	table map[string]Symbol
+}
+
+func (s *scopeBuilder) Find(name string) (Symbol, bool) {
+	symbol, ok := s.table[name]
+	return symbol, ok
 }
 
 func (s *scopeBuilder) Enter(symbol Symbol) (Symbol, bool) {

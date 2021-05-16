@@ -4,39 +4,29 @@ let Vector = <
   x: Double
   y: Double
   z: Double
-  `*`: < { scale: Double -> Double } >
-  `+`: < { other: Vector -> Vector } >
-  `-`: < { other: Vector -> Vector } >
-  dot: < { other: Vector -> Double }>
-  magnitude: < { -> Double } >
-  normalize: < { -> Vector } >
+  `*` = { scale: Double -> [<Vector> :x * scale, :y * scale, :z * scale] }
+  `+` = { other: Vector -> [<Vector> :x + other.x, :y + other.y, :z + other.z] }
+  `-` = { other: Vector -> [<Vector> :x - other.x, :y - ohter.y, :z - other.z] }
+  dot = { other: Vector -> x * other.x + y * other.y + z * other.z }
+  magnitude = { (this dot this).sqrt }
+  normalize = { this * (1.0/magnitude()) }
 >
-
 let vector = { x: Double, y: Double, z: Double -> [<Vector> :x, :y, :z] }
-let Vector.`*` = { scale: Double -> [<Vector> :x * scale, :y * scale, :z * scale] }
-let Vector.`+` = { other: Vector -> [<Vector> :x + other.x, :y + other.y, :z + other.z] }
-let Vector.`-` = { other: Vector -> [<Vector> :x - other.x, :y - ohter.y, :z - other.z] }
-let Vector.dot = { other: Vector -> x * other.x + y * other.y + z * other.z }
-let Vector.magnitude = { (this dot this).sqrt }
-let Vector.normalize = { this * (1.0/magnitude()) }
 
 let Ray = <
   origin: Vector
   direction: Vector
 >
-
 let ray = { origin: Vector, direction: Vector -> [<Ray> :origin, :direction] }
 
 let Color = <
   r: Double
   g: Double
   b: Double
-  `*`: < { scale: Double -> Color } >
-  `+`: < { other: Color -> Color } >
+  `*` = { scale: Double -> [<Color> :r * scale, :g * scale, :b * scale] }
+  `+` = { other: Color -> [<Color> :r + other.r, :g + other.g, :b + other.b] }
 >
 let color = { r: Double, g: Double, b: Double -> [<Color> :r, :g, :b] }
-let Color.`*` = { scale: Double -> [<Color> :r * scale, :g * scale, :b * scale] }
-let Color.`+` = { other: Color -> [<Color> :r + other.r, :g + other.g, :b + other.b] }
 
 val white = color(r: 1.0, g: 1.0, b:1.0)
 val red = color(r: 1.0, g: 0.0, b: 0.0)
@@ -47,11 +37,10 @@ let Sphere = <
   center: Vector
   radius: Double
   color: Color
-  normalize: < { vector: Vector -> Vector } >
+  normalize = { vector: Vector -> (center - v).normalize() }
 >
 
 let sphere = { center: Vector, radius: Double, color: Color -> [<Sphere> :center, :radius, :color] }
-let Sphere.normalize = { vector: Vector -> (center - v).normalize() }
 
 let Light = <
   position: Vector

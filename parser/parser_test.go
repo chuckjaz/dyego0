@@ -866,9 +866,6 @@ var _ = Describe("parser", func() {
 		It("can parse the simple example", func() {
 			parseFile("../examples/Simple.dg")
 		})
-		It("can parse Wasm_wasm.dg", func() {
-			parseFile("../builtins/Wasm_wasm.dg")
-		})
 		It("can parse Dyego0_wasm.dg", func() {
 			parseFile("../builtins/Dyego0_wasm.dg")
 		})
@@ -943,8 +940,8 @@ func parseNamed(text, filename string, scope vocabularyScope) ast.Element {
 	fs := tokens.NewFileSet()
 	fb := fs.BuildFile(filename, len(text))
 	p := NewParser(scan(text, fb), scope)
-	r := p.Parse()
 	recordLines(fb, text)
+	r := p.Parse()
 	fb.Build()
 	errs := p.Errors()
 	if errs != nil {

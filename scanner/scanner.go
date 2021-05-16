@@ -161,7 +161,7 @@ loop:
 			line++
 			s.nlloc = offset - 1
 			if s.fb != nil {
-				s.fb.AddLine(offset)
+				s.fb.AddLine(offset - 1)
 			}
 			continue
 

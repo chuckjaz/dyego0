@@ -1,46 +1,57 @@
-package binder_test
+package binder
 
 import (
 	"dyego0/ast"
-	"dyego0/binder"
 	"dyego0/diagnostics"
 	"dyego0/parser"
 	"dyego0/scanner"
-	"dyego0/symbols"
 	"dyego0/tokens"
+	"dyego0/types"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("enter", func() {
-	enter := func(text string) symbols.Scope {
-		context := binder.NewContext()
+	enter := func(text string) *typeBuilder {
+		context := NewContext()
 		element := parse(text)
-		builder := symbols.NewBuilder()
+		typeSymbol := types.NewTypeSymbol("someType", nil)
+		builder := newTypeBuilder(typeSymbol)
 		context.Enter(element, builder)
 		Expect(len(context.Errors)).To(Equal(0))
-		return builder.Build()
+		return builder
 	}
 	It("should be able to enter a single type", func() {
 		scope := enter("let a = < a: Int >")
-		_, ok := scope.Find("a")
+		_, ok := scope.FindTypeSymbol("a")
 		Expect(ok).To(BeTrue())
 	})
 	It("should be able to enter multiple types", func() {
 		scope := enter("let a = < a: Int >, let b = < b: Int >")
-		_, ok := scope.Find("a")
+		_, ok := scope.FindTypeSymbol("a")
 		Expect(ok).To(BeTrue())
-		_, ok = scope.Find("b")
+		_, ok = scope.FindTypeSymbol("b")
 		Expect(ok).To(BeTrue())
 	})
 	It("should detect a duplicate symbol", func() {
-		context := binder.NewContext()
+		context := NewContext()
 		element := parse("let a = < a: Int >, let a = < b: Int >")
-		builder := symbols.NewBuilder()
+		builder := newTypeBuilder(nil)
 		context.Enter(element, builder)
 		Expect(len(context.Errors)).To(Equal(1))
 		Expect(context.Errors[0].Error()).To(Equal("Duplicate symbol"))
+	})
+	It("should be able to enter sub-types", func() {
+		typeBuilder := enter("let a = < a = <a: Int> >")
+		topA, ok := typeBuilder.FindTypeSymbol("a")
+		Expect(ok).To(BeTrue())
+		topABuilder, ok := typeBuilder.FindNestedTypeBuilder(topA)
+		Expect(ok).To(BeTrue())
+		nestedA, ok := topABuilder.FindTypeSymbol("a")
+		Expect(ok).To(BeTrue())
+		Expect(nestedA.Name()).To(Equal("a"))
 	})
 })
 
@@ -86,4 +97,9 @@ func parseNamed(text, filename string) ast.Element {
 
 func parse(text string) ast.Element {
 	return parseNamed(text, "test")
+}
+
+func TestErrors(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Binding Suite")
 }

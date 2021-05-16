@@ -270,7 +270,7 @@ type Where interface {
 // LetDefinition is a constant or type declaration
 type LetDefinition interface {
 	Element
-	Name() Element
+	Name() Name
 	Value() Element
 	IsLetDefinition() bool
 }
@@ -298,14 +298,6 @@ type TypeLiteralMember interface {
 	Name() Name
 	Type() Element
 	IsTypeLiteralMember() bool
-}
-
-// TypeLiteralConstant is a type literal constant
-type TypeLiteralConstant interface {
-	Element
-	Name() Name
-	Value() Element
-	IsTypeLiteralConstant() bool
 }
 
 // CallableTypeMember is a callable type literal member
@@ -484,9 +476,8 @@ type Builder interface {
 	Where(left, right Element) Where
 	Parameter(name Name, typ Element, deflt Element) Parameter
 	VarDefinition(name Name, typ Element, value Element, mutable bool) VarDefinition
-	LetDefinition(name Element, value Element) LetDefinition
+	LetDefinition(name Name, value Element) LetDefinition
 	TypeLiteral(members []Element) TypeLiteral
-	TypeLiteralConstant(name Name, value Element) TypeLiteralConstant
 	TypeLiteralMember(name Name, typ Element) TypeLiteralMember
 	CallableTypeMember(parameters []Element, result Element) CallableTypeMember
 	SpreadTypeMember(reference Element) SpreadTypeMember
@@ -1397,11 +1388,11 @@ func (b *builderImpl) VarDefinition(name Name, typ Element, value Element, mutab
 
 type letDefinitionImpl struct {
 	location.Location
-	name  Element
+	name  Name
 	value Element
 }
 
-func (l *letDefinitionImpl) Name() Element {
+func (l *letDefinitionImpl) Name() Name {
 	return l.name
 }
 
@@ -1417,7 +1408,7 @@ func (l *letDefinitionImpl) String() string {
 	return fmt.Sprintf("LetDefinition(%s, name: %s, value: %s)", l.Location, s(l.name), s(l.value))
 }
 
-func (b *builderImpl) LetDefinition(name Element, value Element) LetDefinition {
+func (b *builderImpl) LetDefinition(name Name, value Element) LetDefinition {
 	return &letDefinitionImpl{Location: b.Loc(), name: name, value: value}
 }
 
@@ -1440,32 +1431,6 @@ func (t *typeLiteralImpl) String() string {
 
 func (b *builderImpl) TypeLiteral(members []Element) TypeLiteral {
 	return &typeLiteralImpl{Location: b.Loc(), members: members}
-}
-
-type typeLiteralConstantImpl struct {
-	location.Location
-	name  Name
-	value Element
-}
-
-func (t *typeLiteralConstantImpl) Name() Name {
-	return t.name
-}
-
-func (t *typeLiteralConstantImpl) Value() Element {
-	return t.value
-}
-
-func (t *typeLiteralConstantImpl) IsTypeLiteralConstant() bool {
-	return true
-}
-
-func (t *typeLiteralConstantImpl) String() string {
-	return fmt.Sprintf("TypeLiteralConstant(%s, name: %s, value: %s)", t.Location, s(t.name), s(t.value))
-}
-
-func (b *builderImpl) TypeLiteralConstant(name Name, value Element) TypeLiteralConstant {
-	return &typeLiteralConstantImpl{Location: b.Loc(), name: name, value: value}
 }
 
 type typeLiteralMemberImpl struct {

@@ -8,16 +8,17 @@ import (
 )
 
 type enterVisitor struct {
-	builder symbols.ScopeBuilder
+	builder *typeBuilder
+	c       *BindingContext
 	errors  []errors.Error
 }
 
-func newEnterVisitor(builder symbols.ScopeBuilder) *enterVisitor {
-	return &enterVisitor{builder: builder}
+func newEnterVisitor(builder *typeBuilder, c *BindingContext) *enterVisitor {
+	return &enterVisitor{builder: builder, c: c}
 }
 
 func (v *enterVisitor) enterSymbol(symbol symbols.Symbol, node ast.Element) {
-	_, ok := v.builder.Enter(symbol)
+	ok := v.builder.AddTypeSymbol(symbol)
 	if !ok {
 		v.errors = append(v.errors, errors.New(node, "Duplicate symbol"))
 	}
@@ -29,24 +30,36 @@ func (v *enterVisitor) Visit(element ast.Element) bool {
 		v.Visit(n.Left())
 		v.Visit(n.Right())
 	case ast.LetDefinition:
-		if isTypeDeclaration(n) {
-			name, ok := n.Name().(ast.Name)
-			if ok {
-				v.enterSymbol(types.NewTypeSymbol(name.Text(), nil), n)
-			}
+		if isTypeLiteral(n.Value()) {
+			v.handleTypeLiteral(n.Name(), n.Value().(ast.TypeLiteral))
+		} else {
+			typeConstant := types.NewTypeConstant(n.Name().Text(), nil, nil)
+			v.enterSymbol(typeConstant, n.Name())
 		}
+	case ast.Spread:
+
+	case ast.TypeLiteral:
+		ast.WalkChildren(n, v)
 	}
 	return true
 }
 
-func isTypeDeclaration(declaration ast.LetDefinition) bool {
-	_, ok := declaration.Value().(ast.TypeLiteral)
+func (v *enterVisitor) handleTypeLiteral(name ast.Name, literal ast.TypeLiteral) {
+	symbol := types.NewTypeSymbol(name.Text(), nil)
+	v.enterSymbol(symbol, name)
+	nestedBuilder := newTypeBuilder(symbol)
+	v.builder.RecordNestedTypeBuilder(symbol, nestedBuilder)
+	v.c.Enter(literal, nestedBuilder)
+}
+
+func isTypeLiteral(value ast.Element) bool {
+	_, ok := value.(ast.TypeLiteral)
 	return ok
 }
 
-// Enter enters the types declared a the root of emement into the scope
-func (c *BindingContext) Enter(element ast.Element, builder symbols.ScopeBuilder) {
-	v := newEnterVisitor(builder)
+// Enter symbols for the let definition in element into builder
+func (c *BindingContext) Enter(element ast.Element, builder *typeBuilder) {
+	v := newEnterVisitor(builder, c)
 	v.Visit(element)
 	c.Errors = append(c.Errors, v.errors...)
 }

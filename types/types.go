@@ -10,29 +10,43 @@ import (
 
 // Type represents the operations that can be
 type Type interface {
-	// Symbol is the types unique symbol. Other TypeSymbol's might refer to this type but
-	// this symbol can be used as the canonical symbol.
+	// Symbol is the types unique symbol. Other TypeSymbol's might refer to this type but this symbol can be used as the
+	// canonical symbol.
 	Symbol() TypeSymbol
 
-	// DisplayName is a name that can be used in error messages. DisplayName is allowed to
-	// calculate a name and take time doing so, which, for example, would happen if the
-	// type is from an anonymous literal. For a quick, non-calculated name, use the symbol's
-	// name.
+	// DisplayName is a name that can be used in error messages. DisplayName is allowed to calculate a name and take
+	// time doing so, which, for example, would happen if the type is from an anonymous literal. For a quick, non-
+	// calculated name, use the symbol's name.
 	DisplayName() string
 
 	// Members is an array of the type's members.
 	Members() []Member
 
+	// MembersScope is the scope for finding members
+	MembersScope() symbols.Scope
+
 	// Signatures is an array of callable signature
 	Signatures() []Signature
+
+	// TypeScope for methods and constants such as constants and methods
+	TypeScope() symbols.Scope
+}
+
+// ErrorType is the type for eerrors.
+type ErrorType interface {
+	Type
+
+	// IsErrorType is true for error types
+	IsErrorType() bool
 }
 
 // TypeSymbol is a type
 type TypeSymbol interface {
 	symbols.Symbol
 
-	// The type for which this is the symbol for. This is not necessarily the canoical symbol.
-	// The canonical symbol can be retrieved by calling Canonical.
+	// The type for which this is the symbol for. This is not necessarily the
+	// canoical symbol. The canonical symbol can be retrieved by calling
+	// Canonical().
 	Type() Type
 
 	// Return the canonical symbol for the type.
@@ -56,6 +70,9 @@ type Member interface {
 // Field is a field of a data type
 type Field interface {
 	Member
+
+	// Mutable returns if the field can be modified
+	Mutable() bool
 
 	// IsField returns true
 	IsField() bool
@@ -84,21 +101,50 @@ type Parameter interface {
 	IsParameter() bool
 }
 
-// TypeMember is an embedded type
-type TypeMember interface {
-	Member
+// TypeConstant is a literal constant declared by the type
+type TypeConstant interface {
+	symbols.Symbol
 
-	// IsTypeMember returns true
-	IsTypeMember() bool
+	// Type is the type of the constant
+	Type() Type
+
+	// Value is the value of the constant
+	Value() interface{}
 }
 
 // NewType create a new type
-func NewType(symbol TypeSymbol, members []Member, signatures []Signature) Type {
-	result := &typeImpl{symbol: symbol, members: members, signatures: signatures}
+func NewType(
+	symbol TypeSymbol,
+	members []Member,
+	membersScope symbols.Scope,
+	signatures []Signature,
+	typeScope symbols.Scope,
+) Type {
+	result := &typeImpl{
+		symbol:       symbol,
+		members:      members,
+		membersScope: membersScope,
+		signatures:   signatures,
+		typeScope:    typeScope,
+	}
 	if symbol.Type() == nil {
 		UpdateTypeSymbol(symbol, result)
 	}
 	return result
+}
+
+func NewErrorType() Type {
+	errorTypeSymbol := NewTypeSymbol("$error", nil)
+	emptyScope := symbols.NewBuilder().Build()
+	errorType := &errorTypeImpl{
+		typeImpl: typeImpl{
+			symbol:       errorTypeSymbol,
+			membersScope: emptyScope,
+			typeScope:    emptyScope,
+		},
+	}
+	UpdateTypeSymbol(errorTypeSymbol, errorType)
+	return errorType
 }
 
 // NewTypeSymbol creates a new type symbol. Passing nil for typ is allowed when creating a named type
@@ -114,8 +160,16 @@ func UpdateTypeSymbol(sym TypeSymbol, typ Type) {
 }
 
 // NewField creates a new field symbol
-func NewField(name string, typ Type) Field {
-	return &fieldImpl{memberImpl: memberImpl{name: name, typ: typ}}
+func NewField(name string, typ Type, mutable bool) Field {
+	return &fieldImpl{
+		memberImpl: memberImpl{
+			updatableTypedSymbol: updatableTypedSymbol{
+				name: name,
+				typ:  typ,
+			},
+			mutable: mutable,
+		},
+	}
 }
 
 // NewSignature creates a new signature
@@ -125,18 +179,20 @@ func NewSignature(this Type, parameters []Parameter, result Type) Signature {
 
 // NewParameter creates a new parameter symbol
 func NewParameter(name string, typ Type) Parameter {
-	return &parameterImpl{name: name, typ: typ}
-}
-
-// NewTypeMember creates a new type member
-func NewTypeMember(name string, typ Type) TypeMember {
-	return &typeMemberImpl{memberImpl: memberImpl{name: name, typ: typ}}
+	return &parameterImpl{
+		updatableTypedSymbol: updatableTypedSymbol{
+			name: name,
+			typ:  typ,
+		},
+	}
 }
 
 type typeImpl struct {
-	symbol     TypeSymbol
-	members    []Member
-	signatures []Signature
+	symbol       TypeSymbol
+	members      []Member
+	membersScope symbols.Scope
+	signatures   []Signature
+	typeScope    symbols.Scope
 }
 
 func (t *typeImpl) Symbol() TypeSymbol {
@@ -147,8 +203,16 @@ func (t *typeImpl) Members() []Member {
 	return t.members
 }
 
+func (t *typeImpl) MembersScope() symbols.Scope {
+	return t.membersScope
+}
+
 func (t *typeImpl) Signatures() []Signature {
 	return t.signatures
+}
+
+func (t *typeImpl) TypeScope() symbols.Scope {
+	return t.typeScope
 }
 
 func (t *typeImpl) DisplayName() string {
@@ -181,6 +245,14 @@ func (t *typeImpl) String() string {
 	return t.DisplayName()
 }
 
+type errorTypeImpl struct {
+	typeImpl
+}
+
+func (_ *errorTypeImpl) IsErrorType() bool {
+	return true
+}
+
 type typeSymbolImpl struct {
 	name string
 	typ  Type
@@ -202,17 +274,31 @@ func (s *typeSymbolImpl) Canonical() TypeSymbol {
 	return s.Type().Symbol()
 }
 
-type memberImpl struct {
+type UpdateableType interface {
+	UpdateType(typ Type)
+}
+
+type updatableTypedSymbol struct {
 	name string
 	typ  Type
 }
 
-func (m memberImpl) Name() string {
-	return m.name
+func (u updatableTypedSymbol) Name() string {
+	return u.name
 }
 
-func (m memberImpl) Type() Type {
-	return m.typ
+func (u updatableTypedSymbol) Type() Type {
+	return u.typ
+}
+
+func (u *updatableTypedSymbol) UpdateType(typ Type) {
+	assert.Assert(u.typ == nil, "Symbol '%s' already has a type", u.name)
+	u.typ = typ
+}
+
+type memberImpl struct {
+	updatableTypedSymbol
+	mutable bool
 }
 
 func (m memberImpl) IsMember() bool {
@@ -227,10 +313,18 @@ func (f *fieldImpl) IsField() bool {
 	return true
 }
 
+func (f *fieldImpl) Mutable() bool {
+	return f.mutable
+}
+
 type signatureImpl struct {
 	this       Type
 	parameters []Parameter
 	result     Type
+}
+
+func (s *signatureImpl) UpdateType(typ Type) {
+	s.this = typ
 }
 
 func (s *signatureImpl) This() Type {
@@ -265,29 +359,53 @@ func (s *signatureImpl) String() string {
 	return builder.String()
 }
 
+type resultUpdater struct {
+	signature *signatureImpl
+}
+
+func (r resultUpdater) UpdateType(typ Type) {
+	r.signature.result = typ
+}
+
+func ResultTypeUpdater(signature Signature) UpdateableType {
+	sig, ok := signature.(*signatureImpl)
+	assert.Assert(ok, "Custom implemenation of Signature not supported for update")
+	return resultUpdater{signature: sig}
+}
+
 type parameterImpl struct {
-	name string
-	typ  Type
-}
-
-func (p *parameterImpl) Name() string {
-	return p.name
-}
-
-func (p *parameterImpl) Type() Type {
-	return p.typ
+	updatableTypedSymbol
 }
 
 func (p *parameterImpl) IsParameter() bool {
 	return true
 }
 
-type typeMemberImpl struct {
-	memberImpl
+type UpdateableTypeConstant interface {
+	UpdateValue(value interface{})
 }
 
-func (t *typeMemberImpl) IsTypeMember() bool {
-	return true
+type typeConstant struct {
+	updatableTypedSymbol
+	value interface{}
+}
+
+func (t *typeConstant) Value() interface{} {
+	return t.value
+}
+
+func (t *typeConstant) UpdateValue(value interface{}) {
+	assert.Assert(t.value == nil, "Value of %s was already updated", t.name)
+}
+
+func NewTypeConstant(name string, typ Type, value interface{}) TypeConstant {
+	return &typeConstant{
+		updatableTypedSymbol: updatableTypedSymbol{
+			name: name,
+			typ:  typ,
+		},
+		value: value,
+	}
 }
 
 type stringBuilder struct {

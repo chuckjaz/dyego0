@@ -252,13 +252,6 @@ var _ = Describe("ast", func() {
 			Expect(t.IsTypeLiteral()).To(BeTrue())
 			Expect(s(t)).To(Equal("TypeLiteral(Location(0-1), members: [])"))
 		})
-		It("TypeLiteralConstant", func() {
-			t := b.TypeLiteralConstant(nil, nil)
-			Expect(t.Name()).To(BeNil())
-			Expect(t.Value()).To(BeNil())
-			Expect(t.IsTypeLiteralConstant()).To(BeTrue())
-			Expect(s(t)).To(Equal("TypeLiteralConstant(Location(0-1), name: nil, value: nil)"))
-		})
 		It("TypeLiteralMember", func() {
 			m := b.TypeLiteralMember(nil, nil)
 			Expect(m.Name()).To(BeNil())

@@ -2,13 +2,14 @@ package sources_test
 
 import (
 	"dyego0/sources"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"io"
 	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("modules", func() {
+var _ = Describe("sources", func() {
 	Describe("SourceReader", func() {
 		It("can create a source reader", func() {
 			sourceReader := sources.NewSourceReader("a", "b", func() (io.Reader, error) { return nil, nil })

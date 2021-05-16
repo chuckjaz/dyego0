@@ -1,4 +1,249 @@
-...Wasm
+let valtype = <
+  i32 = 0x7Fub
+  i64 = 0x7Eub
+  f32 = 0x7Dub
+  f64 = 0x7Cub
+>
+
+let limits = <
+  min = 0x00ub
+  min_max = 0x81ub
+>
+
+let inst = <
+  unreachable = 0x00ub
+  nop = 0x01ub
+  block = 0x02ub
+  loop = 0x03ub
+  if = 0x04ub
+  else = 0x05ub
+  br = 0x0Cub
+  br_if = 0x0Dub
+  br_table = 0x0Eub
+  ret = 0x0Fub
+  call = 0x10ub
+  call_indirect = 0x11ub
+
+  drop = 0x1Aub
+  select = 0x1Bub
+
+  local = <
+    get = 0x20ub
+    set = 0x21ub
+    tee = 0x22ub
+  >
+
+  global = <
+    get = 0x23ub
+    set = 0x24ub
+  >
+
+  i32 = <
+    const = 0x41ub
+
+    load = 0x28ub
+
+    load8_s = 0x2Cub
+    load8_u = 0x2Dub
+    load16_s = 0x2Eub
+    load16_u = 0x2Fub
+
+    store = 0x36ub
+
+    store8 = 0x3Aub
+    store16 = 0x3Bub
+
+    eqz = 0x45ub
+    eq = 0x46ub
+    ne = 0x47ub
+    lt_s = 0x48ub
+    lt_u = 0x49ub
+    gt_s = 0x4Aub
+    gt_u = 0x4Bub
+    le_s = 0x4Cub
+    le_u = 0x4Dub
+    ge_s = 0x4Eub
+    ge_u = 0x4Fub
+
+    clz = 0x67ub
+    ctz = 0x68ub
+    popcnt = 0x69ub
+    add = 0x6Aub
+    sub = 0x6Bub
+    mul = 0x6Cub
+    div_s = 0x6Dub
+    div_u = 0x6Eub
+    rem_s = 0x6Fub
+    rem_u = 0x70ub
+    and = 0x71ub
+    or = 0x72ub
+    xor = 0x73ub
+    shl = 0x74ub
+    shr_s = 0x75ub
+    shr_u = 0x76ub
+    rotl = 0x77ub
+    rotr = 0x78ub
+
+    wrap_i64 = 0xA7ub
+    trunc_f32_s = 0xA8ub
+    trunc_f32_u = 0xA9ub
+    trunc_f64_s = 0xAAub
+    trunc_f64_u = 0xABub
+
+    reinterpret_f32 = 0xBCub
+
+    extend8_s = 0xC0ub
+    extend16_s = 0xC1ub
+  >
+
+  i64 = <
+    const = 0x42ub
+
+    load = 0x29ub
+
+    load8_s = 0x30ub
+    load8_u = 0x31ub
+    load16_s = 0x32ub
+    load16_u = 0x33ub
+    load32_s = 0x34ub
+    load32_u = 0x35ub
+
+    store = 0x37ub
+
+    store8 = 0x3Cub
+    store16 = 0x3Dub
+    store32 = 0x3Eub
+
+    eqz = 0x50ub
+    eq = 0x51ub
+    ne = 0x52ub
+    lt_s = 0x53ub
+    lt_u = 0x54ub
+    gt_s = 0x55ub
+    gt_u = 0x56ub
+    le_s = 0x57ub
+    le_u = 0x58ub
+    ge_s = 0x59ub
+    ge_u = 0x5Aub
+
+    clz = 0x79ub
+    ctz = 0x7Aub
+    popcnt = 0x7Bub
+    add = 0x7Cub
+    sub = 0x7Dub
+    mul = 0x7Eub
+    div_s = 0x7Fub
+    div_u = 0x80ub
+    rem_s = 0x81ub
+    rem_u = 0x82ub
+    and = 0x83ub
+    or = 0x84ub
+    xor = 0x85ub
+    shl = 0x86ub
+    shr_s = 0x87ub
+    shr_u = 0x88ub
+    rotl = 0x89ub
+    rotr = 0x8Aub
+
+    extend_i32_s = 0xACub
+    extend_i32_u = 0xADub
+    trunc_f32_s = 0xAEub
+    trunc_f32_u = 0xAFub
+    trunc_f64_s = 0xB0ub
+    trunc_f64_u = 0xB1ub
+
+    reinterpret_f64 = 0xBDub
+
+    extend_8_s = 0xC0ub
+    extend_16_s = 0xC1ub
+    extend_32_s = 0xC2ub
+  >
+
+  f32 = <
+    const = 0x43ub
+
+    eq = 0x5Bub
+    ne = 0x5Cub
+    lt = 0x5Dub
+    gt = 0x5Eub
+    le = 0x5Fub
+    ge = 0x60ub
+
+    abs = 0x8Bub
+    neg = 0x8Cub
+    ceil = 0x8Dub
+    floor = 0x8Eub
+    trunc = 0x8Fub
+    nearest = 0x90ub
+    sqrt = 0x91ub
+    add = 0x92ub
+    sub = 0x93ub
+    mul = 0x94ub
+    div = 0x95ub
+    min = 0x96ub
+    max = 0x97ub
+    copysign = 0x98ub
+
+    convert_i32_s = 0xB2ub
+    convert_i32_u = 0xB3ub
+    convert_i64_s = 0xB4ub
+    convert_i64_u = 0xB5ub
+    demote_f64 = 0xB6ub
+
+    reinterpret_i32 = 0xBEub
+  >
+
+  f64 = <
+    const = 0x44ub
+
+    eq = 0x61ub
+    ne = 0x62ub
+    lt = 0x63ub
+    gt = 0x64ub
+    le = 0x65ub
+    ge = 0x66ub
+
+    abs = 0x99ub
+    neg = 0x9Aub
+    ceil = 0x9Bub
+    floor = 0x9Cub
+    trunc = 0x9Dub
+    nearest = 0x9Eub
+    sqrt = 0x9Fub
+    add = 0xA0ub
+    sub = 0xA1ub
+    mul = 0xA2ub
+    div = 0xA3ub
+    min = 0xA4ub
+    max = 0xA5ub
+    copysign = 0xA6ub
+
+    convert_i32_s = 0xB7ub
+    convert_i32_u = 0xB8ub
+    convert_i64_s = 0xB9ub
+    convert_i64_u = 0xBAub
+    promote_f32 = 0xBBub
+
+    reinterpret_i64 = 0xBFub
+  >
+
+  memory = <
+    size = 0x3Fub
+    grow = 0x40ub
+  >
+>
+
+let intrinsics = <
+  string = <
+    `+` = 1
+    `>` = 2
+    `<` = 3
+    `>=` = 4
+    `<=` = 5
+    `==` = 6
+    `!=` = 7
+  >
+>
 
 let Operators = <|
   postfix operator (`++`, `--`, `?.`, `?`) right,
@@ -18,7 +263,7 @@ let Operators = <|
 |>
 
 let Boolean = <
-  `@fmt` = valtype.i32
+  `@form` = valtype.i32
   `@size` = 1
   `@load.global` = inst.i32.load8_s
   `@store.global` = inst.i32.store8
@@ -29,7 +274,7 @@ let Boolean = <
 >
 
 let Byte = <
-  `@fmt` = valtype.i32
+  `@form` = valtype.i32
   `@size` = 1
   `@load.global` = inst.i32.load8_u
   `@store.global` = inst.i32.store8
@@ -59,7 +304,7 @@ let Byte = <
 >
 
 let Int = <
-  `@fmt` = valtype.i32
+  `@form` = valtype.i32
   `@size` = 4
   `@load.global` = inst.i32.load
   `@store.global` = inst.i32.store
@@ -89,9 +334,10 @@ let Int = <
 >
 
 let Long = <
-  `@fmt` = valtype.i64
+  `@form` = valtype.i64
   `@size` = 8
   `@load.global` = inst.i64.load
+  `@store.global` = inst.i64.store
 
   `+` = {! other: Long -> inst.i64.add !}: Long
   `-` = {! other: Long -> inst.i64.sub !}: Long
@@ -118,9 +364,10 @@ let Long = <
 >
 
 let Float = <
-  `@fmt` = valtype.f32
+  `@form` = valtype.f32
   `@size` = 4
   `@load.global` = inst.f32.load
+  `@store.global` = inst.f32.store
 
   `+` = {! other: Float -> inst.f32.add !}: Float
   `-` = {! other: Float -> inst.f32.sub !}: Float
@@ -137,9 +384,10 @@ let Float = <
 >
 
 let Double = <
-  `@fmt` = valtype.f64
+  `@form` = valtype.f64
   `@size` = 8
   `@load.global` = inst.f64.load
+  `@store.global` = inst.f64.store
 
   `+` = {! other: Double -> inst.f64.add !}: Double
   `-` = {! other: Double -> inst.f64.sub !}: Double
@@ -155,6 +403,28 @@ let Double = <
   Max = {! other: Double -> inst.f64.max !}: Double
 >
 
+let String = <
+  codeUnits: byte[]
+  `+` = {! other: String -> intrinsics.string.`+` !}: String
+  `>` = {! other: String -> intrinsics.string.`>` !}: String
+  `<` = {! other: String -> intrinsics.string.`<` !}: String
+  `>=` = {! other: String -> intrinsics.string.`>=` !}: String
+  `<=` = {! other: String -> intrinsics.string.`<=` !}: String
+  `==` = {! other: String -> intrinsics.string.`==` !}: String
+  `!=` = {! other: String -> intrinsics.string.`!=` !}: String
+  `[]` = { index: Int -> codeUnits[index] }
+> 
+
+let `$builtins` = <
+  Boolean = Boolean
+  Byte = Byte
+  Double = Double
+  Float = Float
+  Long = Long
+  Int = Int
+  String = String
+>
+
 <
   ...Operators
   Operators = Operators
@@ -164,5 +434,7 @@ let Double = <
   Float = Float
   Int = Int
   Long = Long
+  String = String
+  `$builtins` = `$builtins`
 >
 
