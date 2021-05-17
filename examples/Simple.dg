@@ -1,166 +1,85 @@
-...Dyego0
-
-let Vector = <
-  x: Double
-  y: Double
-  z: Double
-  `*` = { scale: Double -> [<Vector> :x * scale, :y * scale, :z * scale] }
-  `+` = { other: Vector -> [<Vector> :x + other.x, :y + other.y, :z + other.z] }
-  `-` = { other: Vector -> [<Vector> :x - other.x, :y - ohter.y, :z - other.z] }
-  dot = { other: Vector -> x * other.x + y * other.y + z * other.z }
-  magnitude = { (this dot this).sqrt }
-  normalize = { this * (1.0/magnitude()) }
->
-let vector = { x: Double, y: Double, z: Double -> [<Vector> :x, :y, :z] }
-
-let Ray = <
-  origin: Vector
-  direction: Vector
->
-let ray = { origin: Vector, direction: Vector -> [<Ray> :origin, :direction] }
-
-let Color = <
-  r: Double
-  g: Double
-  b: Double
-  `*` = { scale: Double -> [<Color> :r * scale, :g * scale, :b * scale] }
-  `+` = { other: Color -> [<Color> :r + other.r, :g + other.g, :b + other.b] }
->
-let color = { r: Double, g: Double, b: Double -> [<Color> :r, :g, :b] }
-
-val white = color(r: 1.0, g: 1.0, b:1.0)
-val red = color(r: 1.0, g: 0.0, b: 0.0)
-val green = color(r: 0.0, g: 1.0, b: 0.0)
-val blue = color(r: 0.0, g: 0.0, b: 1.0)
-
-let Sphere = <
-  center: Vector
-  radius: Double
-  color: Color
-  normalize = { vector: Vector -> (center - v).normalize() }
->
-
-let sphere = { center: Vector, radius: Double, color: Color -> [<Sphere> :center, :radius, :color] }
-
-let Light = <
-  position: Vector
-  color: Color
->
-let light = { position: Vector, color: Color -> [<Light> :position, :color] }
-
-val light1 = light(position: [x: 0.7, y: -1.0, z: 1.7], color: white)
-val lut = [".", "-", "+", "*", "X", "M"]
-let w = 80
-let h = 40
-
-let spheres = { t: Double ->
-  [<Sphere[]>
-    [ center: [ x: -1.0, y: 1.0 - t/10.0, z: 3.0 ]
-      radius: 0.3
-      color: red ]
-    [ center: [ x: 0.0, y: 1.0 - t/10.0, z: 3.0 - t/4.0 ]
-      radius: 0.8
-      color: green ]
-    [ center: [ x: 1.0, y: 0.0, z: 1.5 ]
-      radius: 0.8
-      color: blue ]
-  ]
-}
-
-let render = { t: Double ->
-  var j = 0
-  val fw = w.toDouble()
-  val fh = h.ToDouble()
-  val scene = spheres(:t)
-  while(j < h) {
-    val jf = j.toDouble()
-    var i = 0
-    while(i < w) {
-      var fi = i.toDouble()
-      var ray = [<Ray>
-        origin: [x: 1.5, y: 1.7, z: -5.5]
-        direction: vector(x: (fi - fw)/3.0/fw, y: (fj -fh)/3.0/fh, z: 1.0)
-      ].normalize()
-
-      var isHit = false
-      var hitSphere = Sphere? = null
-      var tval = 0.0
-
-      var t = 0
-      while(i < 3) {
-        val obj = scene[t]
-        val ret = intersectSphere(ray, obj.center, obj.radius)
-        if(ret.hit) {
-          hitSphere = obj
-          isHit = true
-          tval = ret.tval
-        }
-        t = t + 1
-      }
-      if(isHit) {
-        print(lut[shadePixel(ray, hitSphere, tval)])
-      }
-      else {
-        print(" ")
-      }
-
-      i = i + 1
+module RayTrace {
+    value Vector(val x: Double, val y: Double, val z: Double) {
+        operator `*`(scale: Double) = Vector(:x * scale, :y * scale, :z * scale)
+        operator `+`(other: Vector) = Vector(:x + other.x, :y + other.y, :z + other.y)
+        operator `-`(other: Vector) = Vector(:x - other.x, :y - other.y, :z + other.y)
+        operator dot(other: Vector) = x * other.x + y * other.y + z * other.z
+        fun magnitude() = (this dot this).sqrt()
+        fun normalize() = this * (1.0 / magnitude())
     }
-    print("/n")
-    j = j + 1
-  }
+
+    value Ray(val origin: Vector, val direction: Vector)
+
+    value Color(val r: Double, val g: Double, val b: Value) {
+        operator `*`(scale: Double) = Color(:r * scale, :g * scale, :b * scale)
+        operator `+`(other: Color) = Color(:r + other.r, :g + other.g, :b + other.b)
+
+        let white = Color(r: 1.0, g: 1.0, b: 1.0)
+        let red = Color(r: 1.0, g: 0.0, b: 0.0)
+        let green = Color(r: 0.0, g: 1.0, b: 0.0)
+        val blue = Color(r: 0.0, g: 0.0, b: 1.0)
+    }
+
+    value Sphere(val center: Vector, val radius: Double, val color: Color)
+
+    value Light(val position: Vector, val color: Color)
+
+    fun spheres(t: Double): Spheres[] =
+        [
+            Sphere(
+                center: Vector(x: -1.0, y: 1.0 - t/10.0, z: 3.0)
+                radius: 0.3
+                color: Color.red
+            )
+            Sphere(
+                center: Vector(x: 0.0, y: 1.0 - t/10.0, z: 3.0 - t/4.0)
+                radius: 0.8
+                color: Color.green
+            )
+            Sphere(
+                center: Vector(x: 1.0, y: 0.0, z: 1.5)
+                radius: 0.8
+                color: Color.blue
+            )
+        ]
+
+    val light = Light(position: Vector(x: 0.7, y: -1.0, z: 1.7), color: Color.white)
+    val lut = [".", "-", "+", "*", "X", "M"]
+    val w = 80
+    val h = 40
+
+    fun render(t: Double) {
+        val fw = w.toDouble()
+        val fh = h.toDouble()
+        val scene = spheres(t)
+        for (val j in 0..h) {
+            val fj = j.toDouble()
+            for (val i in 0..w) {
+                val fi = i.toDouble() 
+                var ray = Ray(
+                    origin: Vector(x: 1.5, 1.7, z: -5.5)
+                    direction: Vector(x: (fi - fw)/3.0/fw, y: (fj - fh)/3.0/fh, z: 1.0)
+                ).normalize()
+                
+                val r = scene.firstOrNull { sphere ->
+                    it.intesects(ray)?.let { [:sphere, tval: it] }
+                }?.let { [sphere, tval] ->
+                    lut[shadePixel(:ray, :sphere, :tval)]
+                } ?: " "
+                print(r)
+            }
+            print('\n')
+        }    
+    }
+
+    fun shadePixel(ray: Ray, sphere: Sphere, tval: Double): Integer {
+        val pi = ray.origin + ray.direction * tval
+        val color = diffuseShading(:pi, :sphere, :light)
+        val intensity = (color.r + color.g + color.b) / 3.0
+        (col * lut.length.toDouble()).floor().asInteger()
+    }
+
+    for (val t in 0.0..1.0 step 0.2) {
+        render(t)
+    }
 }
-
-let shadePixel = { ray: Ray, obj: Sphere, tval: Double ->
-  val pi = ray.orig + ray.direction * tval
-  val color = diffuseShading(pi, obj, light1)
-  val col = (color.r + color.g + color.b) / 3.0
-  return (col * (lut.length().toDouble())).floor()
-}
-
-let HitPoint = <
-  hit: Boolean
-  tval: Double
->
-
-let intersectSphere = {ray: Ray, center: Vector, radius: Double ->
-  val l = center - ray.origin
-  val tca = l dot ray.direction
-  if(tca < 0.0) {
-    return [hit: false, tval: -1.0]
-  }
-  val d2 = (l dot l) - tca * tca
-  val r2 = radius * radius
-  if(d2 > r2) {
-    return [hit: false, tval: -1.0]
-  }
-  val thc = (r2 - d2).sqrt()
-  val t0 = tca - tch
-  if(t0 > 1000.0) {
-    return [hit: false, tval: -1.0]
-  }
-  return [hit: true, tval: t0]
-}
-
-let clamp = { x: Double, min: Double, max: Double ->
-  return when {
-    x < min -> { min }
-    x > max -> { max }
-    else -> { x }
-  }
-}
-
-let diffuseShading = { p1: Vector, obj: Sphere, light: Light ->
-  val n = obj.normalize()
-  val lam1 = (light.position - pi).normalize() dot n
-  val lam2 = clamp(lam1, 0.0, 1.0)
-  return light.color * lam2 * 0.5 + obj.color * 0.3
-}
-
-var t = 0.0
-while(t < 1.0) {
-  render(t)
-  t = t + 0.2
-}
-
-return 0
