@@ -27,27 +27,7 @@ func WalkChildren(element Element, visitor Visitor) bool {
 		switch e := element.(type) {
 		case Name:
 			return true
-		case LiteralRune:
-			return true
-		case LiteralByte:
-			return true
-		case LiteralInt:
-			return true
-		case LiteralUInt:
-			return true
-		case LiteralLong:
-			return true
-		case LiteralULong:
-			return true
-		case LiteralDouble:
-			return true
-		case LiteralFloat:
-			return true
-		case LiteralString:
-			return true
-		case LiteralBoolean:
-			return true
-		case LiteralNull:
+		case Literal:
 			return true
 		case Selection:
 			return Walk(e.Target(), visitor) && Walk(e.Member(), visitor)
@@ -69,12 +49,11 @@ func WalkChildren(element Element, visitor Visitor) bool {
 			return Walk(e.Type(), visitor) && walkElements(e.Elements(), visitor)
 		case NamedMemberInitializer:
 			return Walk(e.Name(), visitor) && Walk(e.Type(), visitor) && Walk(e.Value(), visitor)
-		case SpreadMemberInitializer:
-			return Walk(e.Target(), visitor)
 		case Lambda:
-			return Walk(e.TypeParameters(), visitor) && walkParameters(e.Parameters(), visitor) && Walk(e.Body(), visitor)
+			return walkParameters(e.Parameters(), visitor) && Walk(e.Body(), visitor) &&
+				Walk(e.Result(), visitor)
 		case IntrinsicLambda:
-			return Walk(e.TypeParameters(), visitor) && walkParameters(e.Parameters(), visitor) && Walk(e.Body(), visitor) &&
+			return walkParameters(e.Parameters(), visitor) && Walk(e.Body(), visitor) &&
 				Walk(e.Result(), visitor)
 		case Loop:
 			return Walk(e.Label(), visitor) && Walk(e.Body(), visitor)
@@ -82,20 +61,16 @@ func WalkChildren(element Element, visitor Visitor) bool {
 			return Walk(e.Name(), visitor) && Walk(e.Type(), visitor) && Walk(e.Default(), visitor)
 		case Return:
 			return Walk(e.Value(), visitor)
-		case TypeParameters:
-			return walkTypeParameters(e.Parameters(), visitor) && walkWheres(e.Wheres(), visitor)
-		case TypeParameter:
-			return Walk(e.Name(), visitor) && Walk(e.Constraint(), visitor)
 		case When:
 			return Walk(e.Target(), visitor) && walkElements(e.Clauses(), visitor)
 		case WhenValueClause:
 			return Walk(e.Value(), visitor) && Walk(e.Body(), visitor)
 		case WhenElseClause:
 			return Walk(e.Body(), visitor)
-		case Where:
-			return Walk(e.Left(), visitor) && Walk(e.Right(), visitor)
-		case LetDefinition:
-			return Walk(e.Name(), visitor) && Walk(e.Value(), visitor)
+		case Definition:
+			return Walk(e.Name(), visitor) && Walk(e.Type(), visitor) && Walk(e.Value(), visitor)
+		case Storage:
+			return Walk(e.Name(), visitor) && Walk(e.Type(), visitor) && Walk(e.Value(), visitor)
 		case TypeLiteral:
 			return walkElements(e.Members(), visitor)
 		case TypeLiteralMember:
@@ -104,12 +79,10 @@ func WalkChildren(element Element, visitor Visitor) bool {
 			return Walk(e.Name(), visitor) && Walk(e.Value(), visitor)
 		case CallableTypeMember:
 			return walkElements(e.Parameters(), visitor) && Walk(e.Result(), visitor)
-		case SpreadTypeMember:
-			return Walk(e.Reference(), visitor)
 		case SequenceType:
 			return Walk(e.Elements(), visitor)
-		case OptionalType:
-			return Walk(e.Element(), visitor)
+		case ReferenceType:
+			return Walk(e.Referent(), visitor)
 		case VocabularyLiteral:
 			return walkElements(e.Members(), visitor)
 		case VocabularyOperatorDeclaration:
@@ -139,24 +112,6 @@ func walkElements(elements []Element, visitor Visitor) bool {
 func walkParameters(parameters []Parameter, visitor Visitor) bool {
 	for _, parameter := range parameters {
 		if !Walk(parameter, visitor) {
-			return false
-		}
-	}
-	return true
-}
-
-func walkTypeParameters(parameters []TypeParameter, visitor Visitor) bool {
-	for _, parameter := range parameters {
-		if !Walk(parameter, visitor) {
-			return false
-		}
-	}
-	return true
-}
-
-func walkWheres(wheres []Where, visitor Visitor) bool {
-	for _, where := range wheres {
-		if !Walk(where, visitor) {
 			return false
 		}
 	}

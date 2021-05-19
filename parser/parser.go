@@ -299,9 +299,8 @@ func (p *parser) separator() bool {
 }
 
 var primitiveTokens = []tokens.Token{
-	tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-	tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
-	tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang,
+	tokens.Literal, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace, tokens.LParen,
+	tokens.Symbol, tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang,
 }
 
 func (p *parser) sequence() ast.Element {
@@ -332,12 +331,11 @@ func (p *parser) sequence() ast.Element {
 		default:
 			left = p.expression()
 		}
-	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.LBrace,
-		tokens.LParen, tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang:
+	case tokens.Literal, tokens.True, tokens.False, tokens.LBrace, tokens.LParen, tokens.Let,
+		tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang:
 		left = p.expression()
 	case tokens.Var, tokens.Val:
-		left = p.varDeclaration()
+		left = p.storage()
 	case tokens.Return:
 		left = p.returnStatement()
 	default:
@@ -345,10 +343,8 @@ func (p *parser) sequence() ast.Element {
 	}
 	if p.separator() {
 		switch p.current {
-		case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-			tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
-			tokens.LParen, tokens.Symbol, tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang, tokens.Var, tokens.Val,
-			tokens.Return:
+		case tokens.Literal, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace, tokens.LParen, tokens.Symbol,
+			tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang, tokens.Var, tokens.Val, tokens.Return:
 			right := p.sequence()
 			return p.builder.Sequence(left, right)
 		}
@@ -358,9 +354,8 @@ func (p *parser) sequence() ast.Element {
 
 func (p *parser) expression() ast.Element {
 	switch p.current {
-	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
-		tokens.LParen, tokens.Symbol, tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang:
+	case tokens.Literal, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace, tokens.LParen, tokens.Symbol,
+		tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang:
 		return p.operatorExpression(p.embeddingContext.lowestLevel)
 	default:
 		return p.expects(primitiveTokens...)
@@ -505,9 +500,8 @@ func (p *parser) simpleExpression() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	switch p.current {
-	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
-		tokens.LParen, tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang:
+	case tokens.Literal, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace, tokens.LParen, tokens.Let,
+		tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang:
 		left := p.primitive()
 		for {
 			switch p.current {
@@ -565,21 +559,18 @@ func (p *parser) index(left ast.Element) ast.Element {
 func (p *parser) arguments() []ast.Element {
 	var arguments []ast.Element
 	switch p.current {
-	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
-		tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.Colon:
+	case tokens.Literal, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace, tokens.LParen, tokens.Symbol,
+		tokens.Colon:
 		for {
 			switch p.current {
-			case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-				tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
-				tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.Colon:
+			case tokens.Literal, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace, tokens.LParen, tokens.Symbol,
+				tokens.Colon:
 				argument := p.argument()
 				arguments = append(arguments, argument)
 				if p.separator() {
 					switch p.current {
-					case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-						tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
-						tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.Colon:
+					case tokens.Literal, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace, tokens.LParen,
+						tokens.Symbol, tokens.Colon:
 						continue
 					}
 				}
@@ -680,9 +671,7 @@ func (p *parser) whenClauses() []ast.Element {
 				}
 			}
 			fallthrough
-		case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-			tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
-			tokens.LBrace, tokens.LParen, tokens.Symbol:
+		case tokens.Literal, tokens.True, tokens.False, tokens.LBrace, tokens.LParen, tokens.Symbol:
 			result = append(result, p.whenValueClause())
 			if p.separator() {
 				continue
@@ -690,9 +679,7 @@ func (p *parser) whenClauses() []ast.Element {
 		}
 		if p.separator() {
 			switch p.current {
-			case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-				tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier,
-				tokens.LBrace, tokens.LParen, tokens.Symbol:
+			case tokens.Literal, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace, tokens.LParen, tokens.Symbol:
 				continue
 			}
 		}
@@ -728,21 +715,24 @@ func (p *parser) lambda() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	p.expect(tokens.LBrace)
-	typeParameters := p.typeParametersClause()
 	parameters := p.lambdaParameters()
 	var expression ast.Element
 	if p.current != tokens.RBrace {
 		expression = p.sequence()
 	}
 	p.expect(tokens.RBrace)
-	return p.builder.Lambda(typeParameters, parameters, expression)
+	var result ast.Element
+	if p.current == tokens.Colon {
+		p.next()
+		result = p.typeReference()
+	}
+	return p.builder.Lambda(parameters, expression, result)
 }
 
 func (p *parser) intrinsicLambda() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	p.expect(tokens.LBraceBang)
-	typeParameters := p.typeParametersClause()
 	parameters := p.lambdaParameters()
 	var sequence ast.Element
 	if p.current != tokens.BangRBrace {
@@ -754,92 +744,7 @@ func (p *parser) intrinsicLambda() ast.Element {
 		p.next()
 		resultType = p.typeReference()
 	}
-	return p.builder.IntrinsicLambda(typeParameters, parameters, sequence, resultType)
-}
-
-func (p *parser) typeParametersClause() ast.TypeParameters {
-	result, _ := p.firstOf(func() ast.Element {
-		p.builder.PushContext()
-		defer p.builder.PopContext()
-		typeParameters := p.typeParameters()
-		whereClauses := p.whereClauses()
-		p.expectPseudo(tokens.Bar)
-		return p.builder.TypeParameters(typeParameters, whereClauses)
-	}, func() ast.Element {
-		return nil
-	}).(ast.TypeParameters)
-	return result
-}
-
-func (p *parser) typeParameters() []ast.TypeParameter {
-	result := p.firstOfArray(func() []ast.Element {
-		var result []ast.Element
-		for {
-			switch p.current {
-			case tokens.Identifier:
-				typeParameter := p.typeParameter()
-				result = append(result, typeParameter)
-				if p.separator() {
-					if p.pseudo != tokens.Bar && p.pseudo != tokens.Where {
-						continue
-					}
-				}
-			case tokens.Symbol:
-				if p.pseudo == tokens.Bar {
-					break
-				}
-			}
-			break
-		}
-		switch p.pseudo {
-		case tokens.Bar, tokens.Where:
-			return result
-		}
-		p.expectPseudo(tokens.Bar)
-		return result
-	}, func() []ast.Element {
-		return nil
-	})
-	var params []ast.TypeParameter
-	for _, param := range result {
-		params = append(params, param.(ast.TypeParameter))
-	}
-	return params
-}
-
-func (p *parser) whereClauses() []ast.Where {
-	var result []ast.Where
-	for {
-		if p.pseudo == tokens.Where {
-			whereClause := p.whereClause()
-			result = append(result, whereClause)
-			continue
-		}
-		break
-	}
-	return result
-}
-
-func (p *parser) whereClause() ast.Where {
-	p.builder.PushContext()
-	defer p.builder.PopContext()
-	p.expectPseudo(tokens.Where)
-	left := p.typeReference()
-	p.expectPseudo(tokens.Equal)
-	right := p.typeReference()
-	return p.builder.Where(left, right)
-}
-
-func (p *parser) typeParameter() ast.TypeParameter {
-	p.builder.PushContext()
-	defer p.builder.PopContext()
-	name := p.expectIdent()
-	var typeReference ast.Element
-	if p.current == tokens.Colon {
-		p.expect(tokens.Colon)
-		typeReference = p.typeReference()
-	}
-	return p.builder.TypeParameter(name, typeReference)
+	return p.builder.IntrinsicLambda(parameters, sequence, resultType)
 }
 
 func (p *parser) lambdaParameters() []ast.Parameter {
@@ -895,48 +800,16 @@ func (p *parser) primitive() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	switch p.current {
-	case tokens.LiteralRune:
-		result := p.builder.LiteralRune(p.scanner.Value().(rune))
-		p.next()
-		return result
-	case tokens.LiteralByte:
-		result := p.builder.LiteralByte(p.scanner.Value().(byte))
-		p.next()
-		return result
-	case tokens.LiteralInt:
-		result := p.builder.LiteralInt(p.scanner.Value().(int))
-		p.next()
-		return result
-	case tokens.LiteralUInt:
-		result := p.builder.LiteralUInt(p.scanner.Value().(uint))
-		p.next()
-		return result
-	case tokens.LiteralLong:
-		result := p.builder.LiteralLong(p.scanner.Value().(int64))
-		p.next()
-		return result
-	case tokens.LiteralULong:
-		result := p.builder.LiteralULong(p.scanner.Value().(uint64))
-		p.next()
-		return result
-	case tokens.LiteralDouble:
-		result := p.builder.LiteralDouble(p.scanner.Value().(float64))
-		p.next()
-		return result
-	case tokens.LiteralFloat:
-		result := p.builder.LiteralFloat(p.scanner.Value().(float32))
-		p.next()
-		return result
-	case tokens.LiteralString:
-		result := p.builder.LiteralString(p.scanner.Value().(string))
+	case tokens.Literal:
+		result := p.builder.Literal(p.scanner.Value())
 		p.next()
 		return result
 	case tokens.True:
-		result := p.builder.LiteralBoolean(true)
+		result := p.builder.Literal(true)
 		p.next()
 		return result
 	case tokens.False:
-		result := p.builder.LiteralBoolean(false)
+		result := p.builder.Literal(false)
 		p.next()
 		return result
 	case tokens.Identifier:
@@ -1139,7 +1012,7 @@ func (p *parser) spreadTypeMember() ast.Element {
 	defer p.builder.PopContext()
 	p.expectPseudo(tokens.Spread)
 	reference := p.typeReference()
-	return p.builder.SpreadTypeMember(reference)
+	return p.builder.Spread(reference)
 }
 
 func (p *parser) typeLiteralMember() ast.Element {
@@ -1190,9 +1063,14 @@ func (p *parser) definition() ast.Element {
 	case tokens.Let:
 		p.next()
 		name := p.definitionName()
+		var typ ast.Element
+		if p.current == tokens.Colon {
+			p.next()
+			typ = p.typeReference()
+		}
 		p.expectPseudo(tokens.Equal)
 		value := p.letValue()
-		return p.builder.LetDefinition(name, value)
+		return p.builder.Definition(name, typ, value)
 	default:
 		return p.expects(tokens.Let, tokens.Var)
 	}
@@ -1218,8 +1096,7 @@ func (p *parser) letValue() ast.Element {
 		return p.lambda()
 	case tokens.VocabularyStart:
 		return p.vocabularyLiteral()
-	case tokens.LiteralString, tokens.LiteralRune, tokens.LiteralInt, tokens.LiteralByte, tokens.LiteralUInt,
-		tokens.LiteralLong, tokens.LiteralULong, tokens.LiteralFloat, tokens.LiteralDouble:
+	case tokens.Literal:
 		return p.primitive()
 	case tokens.Symbol:
 		if p.pseudo == tokens.LessThan {
@@ -1231,7 +1108,7 @@ func (p *parser) letValue() ast.Element {
 	}
 }
 
-func (p *parser) varDeclaration() ast.VarDefinition {
+func (p *parser) storage() ast.Storage {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	var mutable = false
@@ -1252,7 +1129,7 @@ func (p *parser) varDeclaration() ast.VarDefinition {
 		p.next()
 		value = p.expression()
 	}
-	return p.builder.VarDefinition(name, typ, value, mutable)
+	return p.builder.Storage(name, typ, value, mutable)
 }
 
 func (p *parser) readOnlyObjectInitializer() ast.ObjectInitializer {
@@ -1328,7 +1205,7 @@ func (p *parser) memberInitializer() ast.Element {
 		if p.pseudo == tokens.Spread {
 			p.next()
 			spreadValue := p.expression()
-			return p.builder.SpreadMemberInitializer(spreadValue)
+			return p.builder.Spread(spreadValue)
 		}
 	}
 	return p.expectIdent()
@@ -1367,8 +1244,7 @@ func (p *parser) arrayElements() []ast.Element {
 				break
 			}
 			fallthrough
-		case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-			tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
+		case tokens.Literal, tokens.True, tokens.False, tokens.Identifier, tokens.LBrace,
 			tokens.LParen, tokens.Let, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang:
 			elements = append(elements, p.expression())
 		}
@@ -1650,9 +1526,8 @@ func (p *parser) returnStatement() ast.Return {
 	p.expect(tokens.Return)
 	var value ast.Element
 	switch p.current {
-	case tokens.LiteralRune, tokens.LiteralByte, tokens.LiteralInt, tokens.LiteralUInt, tokens.LiteralLong, tokens.LiteralULong,
-		tokens.LiteralDouble, tokens.LiteralFloat, tokens.LiteralString, tokens.True, tokens.False,
-		tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.LBrack, tokens.LBrackBang, tokens.LBraceBang, tokens.Identifier:
+	case tokens.Literal, tokens.True, tokens.False, tokens.LBrace, tokens.LParen, tokens.Symbol, tokens.LBrack,
+		tokens.LBrackBang, tokens.LBraceBang, tokens.Identifier:
 		value = p.expression()
 	}
 	return p.builder.Return(value)

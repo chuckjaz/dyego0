@@ -766,26 +766,26 @@ loop:
 						b = src[offset]
 						switch b {
 						default:
-							result = tokens.LiteralUInt
+							result = tokens.Literal
 							s.value = uint32(value)
 						case 'b':
 							offset++
-							result = tokens.LiteralByte
+							result = tokens.Literal
 							s.value = byte(value)
 						case 'l':
 							offset++
-							result = tokens.LiteralULong
+							result = tokens.Literal
 							s.value = uint64(value)
 						}
 					case 'l':
 						offset++
-						result = tokens.LiteralLong
+						result = tokens.Literal
 						s.value = int64(value)
 					case 'i':
 						offset++
 						fallthrough
 					default:
-						result = tokens.LiteralInt
+						result = tokens.Literal
 						s.value = int32(value)
 					}
 				}
@@ -836,20 +836,20 @@ loop:
 					b = src[offset]
 					switch b {
 					default:
-						result = tokens.LiteralUInt
+						result = tokens.Literal
 						s.value = uint(value)
 					case 'b':
 						offset++
-						result = tokens.LiteralByte
+						result = tokens.Literal
 						s.value = byte(value)
 					case 'l':
 						offset++
-						result = tokens.LiteralULong
+						result = tokens.Literal
 						s.value = value
 					}
 				case 'l':
 					offset++
-					result = tokens.LiteralLong
+					result = tokens.Literal
 					s.value = int64(value)
 				case 'f':
 					fvalue, err := strconv.ParseFloat(string(src[start:offset]), 32)
@@ -859,7 +859,7 @@ loop:
 						s.msg = err.Error()
 					} else {
 						s.value = float32(fvalue)
-						result = tokens.LiteralFloat
+						result = tokens.Literal
 					}
 				case 'd':
 					fvalue, err := strconv.ParseFloat(string(src[start:offset]), 64)
@@ -869,13 +869,13 @@ loop:
 						s.msg = err.Error()
 					} else {
 						s.value = fvalue
-						result = tokens.LiteralDouble
+						result = tokens.Literal
 					}
 				case 'i':
 					offset++
 					fallthrough
 				default:
-					result = tokens.LiteralInt
+					result = tokens.Literal
 					s.value = int(value)
 				}
 			} else {
@@ -884,13 +884,13 @@ loop:
 					fvalue32, err32 := strconv.ParseFloat(string(src[start:offset]), 32)
 					s.value = float32(fvalue32)
 					err = err32
-					result = tokens.LiteralFloat
+					result = tokens.Literal
 					offset++
 				} else {
 					fvalue64, err64 := strconv.ParseFloat(string(src[start:offset]), 64)
 					s.value = fvalue64
 					err = err64
-					result = tokens.LiteralDouble
+					result = tokens.Literal
 					if src[offset] == 'd' {
 						offset++
 					}
@@ -933,7 +933,7 @@ loop:
 				result = tokens.Invalid
 				s.msg = "Invalid character literal"
 			} else {
-				result = tokens.LiteralRune
+				result = tokens.Literal
 				offset++
 			}
 			s.value = value
@@ -986,7 +986,7 @@ loop:
 				case '"':
 					value += string(src[copyFrom : offset-1])
 					s.value = value
-					result = tokens.LiteralString
+					result = tokens.Literal
 					break loop
 				case '\n', '\r', 0:
 					result = tokens.Invalid

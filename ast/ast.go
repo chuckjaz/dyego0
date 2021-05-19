@@ -29,70 +29,10 @@ type TypedElement interface {
 	Type() Element
 }
 
-// LiteralRune is a rune literal
-type LiteralRune interface {
+// Literal is a rune literal
+type Literal interface {
 	Element
-	Value() rune
-}
-
-// LiteralByte is a byte literal
-type LiteralByte interface {
-	Element
-	Value() byte
-}
-
-// LiteralInt is a integer literal
-type LiteralInt interface {
-	Element
-	Value() int
-}
-
-// LiteralUInt is an unsigned integer literal
-type LiteralUInt interface {
-	Element
-	Value() uint
-}
-
-// LiteralLong is a long literal
-type LiteralLong interface {
-	Element
-	Value() int64
-}
-
-// LiteralULong is an unsigned long literal
-type LiteralULong interface {
-	Element
-	Value() uint64
-}
-
-// LiteralDouble is a dobule literal
-type LiteralDouble interface {
-	Element
-	Value() float64
-}
-
-// LiteralFloat is a float literal
-type LiteralFloat interface {
-	Element
-	Value() float32
-}
-
-// LiteralString is a string literal
-type LiteralString interface {
-	Element
-	Value() string
-}
-
-// LiteralBoolean is a boolean literal
-type LiteralBoolean interface {
-	Element
-	Value() bool
-}
-
-// LiteralNull is a null litearl
-type LiteralNull interface {
-	Element
-	IsNull() bool
+	Value() interface{}
 }
 
 // Selection is a member selector
@@ -172,26 +112,18 @@ type NamedMemberInitializer interface {
 	Value() Element
 }
 
-// SpreadMemberInitializer is a type hoisting member intiailizer
-type SpreadMemberInitializer interface {
-	Element
-	Target() Element
-	IsSpreadMemberInitializer() bool
-}
-
 // Lambda is a lambda
 type Lambda interface {
 	Element
-	TypeParameters() TypeParameters
 	Parameters() []Parameter
 	Body() Element
+	Result() Element
 	IsLambda() bool
 }
 
 // IntrinsicLambda is that specifies instructions
 type IntrinsicLambda interface {
 	Element
-	TypeParameters() TypeParameters
 	Parameters() []Parameter
 	Body() Element
 	Result() Element
@@ -222,21 +154,6 @@ type Return interface {
 	IsReturn() bool
 }
 
-// TypeParameters is a type paramters clause
-type TypeParameters interface {
-	Element
-	Parameters() []TypeParameter
-	Wheres() []Where
-}
-
-// TypeParameter is a type parameter
-type TypeParameter interface {
-	Element
-	Name() Name
-	Constraint() Element
-	IsTypeParameter() bool
-}
-
 // When is a when expression
 type When interface {
 	Element
@@ -259,30 +176,22 @@ type WhenElseClause interface {
 	IsElse() bool
 }
 
-// Where is a type parameter where clause
-type Where interface {
-	Element
-	Left() Element
-	Right() Element
-	IsWhere() bool
-}
-
-// LetDefinition is a constant or type declaration
-type LetDefinition interface {
+// Definition is a constant or type declaration
+type Definition interface {
 	Element
 	Name() Element
+	Type() Element
 	Value() Element
-	IsLetDefinition() bool
+	IsDefinition() bool
 }
 
-// VarDefinition is a field or local variable defintion or declaration
-type VarDefinition interface {
+// Storage is a field or local variable defintion or declaration
+type Storage interface {
 	Element
 	Name() Name
 	Type() Element
 	Value() Element
 	Mutable() bool
-	IsField() bool
 }
 
 // TypeLiteral is a type literal
@@ -315,13 +224,6 @@ type CallableTypeMember interface {
 	Result() Element
 }
 
-// SpreadTypeMember is a spread of another type into a type literal
-type SpreadTypeMember interface {
-	Element
-	Reference() Element
-	IsSpreadTypeMember() bool
-}
-
 // SequenceType transforms Elements() type reference into a sequence
 type SequenceType interface {
 	Element
@@ -329,10 +231,16 @@ type SequenceType interface {
 	IsSequenceType() bool
 }
 
-// OptionalType transforms Element() type reference into an obtional type
+// ReferenceType transforms Referent() type reference into a reference
+type ReferenceType interface {
+	Element
+	Referent() Element
+}
+
+// OptionalType transformls Target() type reference into an optional type
 type OptionalType interface {
 	Element
-	Element() Element
+	Target() Element
 	IsOptionalType() bool
 }
 
@@ -450,17 +358,7 @@ type Builder interface {
 	PushContext()
 	PopContext()
 	Name(value string) Name
-	LiteralRune(value rune) LiteralRune
-	LiteralByte(value byte) LiteralByte
-	LiteralInt(value int) LiteralInt
-	LiteralUInt(value uint) LiteralUInt
-	LiteralLong(value int64) LiteralLong
-	LiteralULong(value uint64) LiteralULong
-	LiteralDouble(value float64) LiteralDouble
-	LiteralFloat(value float32) LiteralFloat
-	LiteralBoolean(value bool) LiteralBoolean
-	LiteralString(value string) LiteralString
-	LiteralNull() LiteralNull
+	Literal(value interface{}) Literal
 	Break(label Name) Break
 	Continue(label Name) Continue
 	Sequence(left, right Element) Sequence
@@ -471,27 +369,23 @@ type Builder interface {
 	ObjectInitializer(mutable bool, typ Element, members []Element) ObjectInitializer
 	ArrayInitializer(mutable bool, typ Element, elements []Element) ArrayInitializer
 	NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer
-	SpreadMemberInitializer(target Element) SpreadMemberInitializer
-	Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda
-	IntrinsicLambda(typeParameters TypeParameters, parameters []Parameter, body Element, result Element) IntrinsicLambda
+	Lambda(parameters []Parameter, body Element, result Element) Lambda
+	IntrinsicLambda(parameters []Parameter, body Element, result Element) IntrinsicLambda
 	Loop(label Name, body Element) Loop
 	Return(value Element) Return
-	TypeParameters(parameters []TypeParameter, wheres []Where) TypeParameters
-	TypeParameter(name Name, constraint Element) TypeParameter
 	When(target Element, clauses []Element) When
 	WhenValueClause(value Element, body Element) WhenValueClause
 	WhenElseClause(body Element) WhenElseClause
-	Where(left, right Element) Where
 	Parameter(name Name, typ Element, deflt Element) Parameter
-	VarDefinition(name Name, typ Element, value Element, mutable bool) VarDefinition
-	LetDefinition(name Element, value Element) LetDefinition
+	Definition(name Element, typ Element, value Element) Definition
+	Storage(name Name, typ Element, value Element, mutable bool) Storage
 	TypeLiteral(members []Element) TypeLiteral
 	TypeLiteralConstant(name Name, value Element) TypeLiteralConstant
 	TypeLiteralMember(name Name, typ Element) TypeLiteralMember
 	CallableTypeMember(parameters []Element, result Element) CallableTypeMember
-	SpreadTypeMember(reference Element) SpreadTypeMember
 	SequenceType(elements Element) SequenceType
-	OptionalType(element Element) OptionalType
+	OptionalType(target Element) OptionalType
+	ReferenceType(referent Element) ReferenceType
 	VocabularyLiteral(members []Element) VocabularyLiteral
 	VocabularyOperatorDeclaration(
 		names []Name,
@@ -556,190 +450,43 @@ func (b *builderImpl) Name(text string) Name {
 	return &nameImpl{Location: b.Loc(), text: text}
 }
 
-type literalRuneImpl struct {
+type literalImpl struct {
 	location.Location
-	value rune
+	value interface{}
 }
 
-func (l *literalRuneImpl) Value() rune {
+func (l *literalImpl) Value() interface{} {
 	return l.value
 }
 
-func (l *literalRuneImpl) String() string {
-	return fmt.Sprintf("LiteralRune(%s, '%s')", l.Location, string(l.value))
+func sOf(value interface{}) string {
+	switch v := value.(type) {
+	case rune:
+		return fmt.Sprintf("'%c'", v)
+	case byte:
+		return fmt.Sprintf("%db", v)
+	case int:
+		return fmt.Sprintf("%d", v)
+	case uint:
+		return fmt.Sprintf("%du", v)
+	case int64:
+		return fmt.Sprintf("%d", v)
+	case float32:
+		return fmt.Sprintf("%ff", v)
+	case float64:
+		return fmt.Sprintf("%f", v)
+	case string:
+		return fmt.Sprintf("\"%s\"", v)
+	}
+	return fmt.Sprintf("%s", value)
 }
 
-func (b *builderImpl) LiteralRune(value rune) LiteralRune {
-	return &literalRuneImpl{Location: b.Loc(), value: value}
+func (l *literalImpl) String() string {
+	return fmt.Sprintf("Literal(%s, %s)", l.Location, sOf(l.value))
 }
 
-type literalByteImpl struct {
-	location.Location
-	value byte
-}
-
-func (l *literalByteImpl) Value() byte {
-	return l.value
-}
-
-func (l *literalByteImpl) String() string {
-	return fmt.Sprintf("LiteralByte(%s, %d)", l.Location, l.value)
-}
-
-func (b *builderImpl) LiteralByte(value byte) LiteralByte {
-	return &literalByteImpl{Location: b.Loc(), value: value}
-}
-
-type literalIntImpl struct {
-	location.Location
-	value int
-}
-
-func (l *literalIntImpl) Value() int {
-	return l.value
-}
-
-func (l *literalIntImpl) String() string {
-	return fmt.Sprintf("LiteralInt(%s, %d)", l.Location, l.value)
-}
-
-func (b *builderImpl) LiteralInt(value int) LiteralInt {
-	return &literalIntImpl{Location: b.Loc(), value: value}
-}
-
-type literalUIntImpl struct {
-	location.Location
-	value uint
-}
-
-func (l *literalUIntImpl) Value() uint {
-	return l.value
-}
-
-func (l *literalUIntImpl) String() string {
-	return fmt.Sprintf("LiteralUInt(%s, %d)", l.Location, l.value)
-}
-
-func (b *builderImpl) LiteralUInt(value uint) LiteralUInt {
-	return &literalUIntImpl{Location: b.Loc(), value: value}
-}
-
-type literalLongImpl struct {
-	location.Location
-	value int64
-}
-
-func (l *literalLongImpl) Value() int64 {
-	return l.value
-}
-
-func (l *literalLongImpl) String() string {
-	return fmt.Sprintf("LiteralLong(%s, %d)", l.Location, l.value)
-}
-
-func (b *builderImpl) LiteralLong(value int64) LiteralLong {
-	return &literalLongImpl{Location: b.Loc(), value: value}
-}
-
-type literalULongImpl struct {
-	location.Location
-	value uint64
-}
-
-func (l *literalULongImpl) Value() uint64 {
-	return l.value
-}
-
-func (l *literalULongImpl) String() string {
-	return fmt.Sprintf("LiteralULong(%s, %d)", l.Location, l.value)
-}
-
-func (b *builderImpl) LiteralULong(value uint64) LiteralULong {
-	return &literalULongImpl{Location: b.Loc(), value: value}
-}
-
-type literalDoubleImpl struct {
-	location.Location
-	value float64
-}
-
-func (l *literalDoubleImpl) Value() float64 {
-	return l.value
-}
-
-func (l *literalDoubleImpl) String() string {
-	return fmt.Sprintf("LiteralDouble(%s, %v)", l.Location, l.value)
-}
-
-func (b *builderImpl) LiteralDouble(value float64) LiteralDouble {
-	return &literalDoubleImpl{Location: b.Loc(), value: value}
-}
-
-type literalFloatImpl struct {
-	location.Location
-	value float32
-}
-
-func (l *literalFloatImpl) Value() float32 {
-	return l.value
-}
-
-func (l *literalFloatImpl) String() string {
-	return fmt.Sprintf("LiteralFloat(%s, %v)", l.Location, l.value)
-}
-
-func (b *builderImpl) LiteralFloat(value float32) LiteralFloat {
-	return &literalFloatImpl{Location: b.Loc(), value: value}
-}
-
-type literalBooleanImpl struct {
-	location.Location
-	value bool
-}
-
-func (l *literalBooleanImpl) Value() bool {
-	return l.value
-}
-
-func (l *literalBooleanImpl) String() string {
-	return fmt.Sprintf("LiteralBoolean(%s, %v)", l.Location, l.value)
-}
-
-func (b *builderImpl) LiteralBoolean(value bool) LiteralBoolean {
-	return &literalBooleanImpl{Location: b.Loc(), value: value}
-}
-
-type literalStringImpl struct {
-	location.Location
-	value string
-}
-
-func (l *literalStringImpl) Value() string {
-	return l.value
-}
-
-func (l *literalStringImpl) String() string {
-	return fmt.Sprintf("LiteralString(%s, \"%s\")", l.Location, l.value)
-}
-
-func (b *builderImpl) LiteralString(value string) LiteralString {
-	return &literalStringImpl{Location: b.Loc(), value: value}
-}
-
-type literalNullImpl struct {
-	location.Location
-}
-
-func (l *literalNullImpl) IsNull() bool {
-	return true
-}
-
-func (l *literalNullImpl) String() string {
-	return fmt.Sprintf("LiteralNull(%s)", l.Location)
-}
-
-func (b *builderImpl) LiteralNull() LiteralNull {
-	return &literalNullImpl{Location: b.Loc()}
+func (b *builderImpl) Literal(value interface{}) Literal {
+	return &literalImpl{Location: b.Loc(), value: value}
 }
 
 type breakImpl struct {
@@ -837,6 +584,44 @@ func (n *sequenceImpl) String() string {
 
 func (b *builderImpl) Sequence(left, right Element) Sequence {
 	return &sequenceImpl{Location: b.Loc(), left: left, right: right}
+}
+
+type optionalTypeImpl struct {
+	location.Location
+	target Element
+}
+
+func (n *optionalTypeImpl) Target() Element {
+	return n.target
+}
+
+func (n *optionalTypeImpl) String() string {
+	return fmt.Sprintf("OptionalType(%s, target: %s", n.Location, s(n.target))
+}
+
+func (n *optionalTypeImpl) IsOptionalType() bool {
+	return true
+}
+
+func (b *builderImpl) OptionalType(target Element) OptionalType {
+	return &optionalTypeImpl{Location: b.Loc(), target: target}
+}
+
+type referenceImpl struct {
+	location.Location
+	referent Element
+}
+
+func (n *referenceImpl) Referent() Element {
+	return n.referent
+}
+
+func (n *referenceImpl) String() string {
+	return fmt.Sprintf("ReferenceType(%s, referent: %s)", n.Location, s(n.referent))
+}
+
+func (b *builderImpl) ReferenceType(referent Element) ReferenceType {
+	return &referenceImpl{Location: b.Loc(), referent: referent}
 }
 
 type spreadImpl struct {
@@ -1014,36 +799,11 @@ func (b *builderImpl) NamedMemberInitializer(name Name, typ Element, value Eleme
 	return &namedMemberInitializerImpl{Location: b.Loc(), name: name, typ: typ, value: value}
 }
 
-type spreadMemberInitializerImpl struct {
-	location.Location
-	target Element
-}
-
-func (n *spreadMemberInitializerImpl) Target() Element {
-	return n.target
-}
-
-func (n *spreadMemberInitializerImpl) IsSpreadMemberInitializer() bool {
-	return true
-}
-
-func (n *spreadMemberInitializerImpl) String() string {
-	return fmt.Sprintf("SpreadMemberInitializer(%s, target: %s)", n.Location, s(n.target))
-}
-
-func (b *builderImpl) SpreadMemberInitializer(target Element) SpreadMemberInitializer {
-	return &spreadMemberInitializerImpl{Location: b.Loc(), target: target}
-}
-
 type lambdaImpl struct {
 	location.Location
-	typeParameters TypeParameters
-	parameters     []Parameter
-	body           Element
-}
-
-func (l *lambdaImpl) TypeParameters() TypeParameters {
-	return l.typeParameters
+	parameters []Parameter
+	body       Element
+	result     Element
 }
 
 func (l *lambdaImpl) Parameters() []Parameter {
@@ -1052,6 +812,10 @@ func (l *lambdaImpl) Parameters() []Parameter {
 
 func (l *lambdaImpl) Body() Element {
 	return l.body
+}
+
+func (l *lambdaImpl) Result() Element {
+	return l.result
 }
 
 func (l *lambdaImpl) IsLambda() bool {
@@ -1072,24 +836,19 @@ func parametersToString(parameters []Parameter) string {
 }
 
 func (l *lambdaImpl) String() string {
-	return fmt.Sprintf("Lambda(%s, typeParameters: %s, parameters: %s, body: %s)", l.Location, s(l.typeParameters),
-		parametersToString(l.parameters), s(l.body))
+	return fmt.Sprintf("Lambda(%s, parameters: %s, body: %s, result: %s)", l.Location,
+		parametersToString(l.parameters), s(l.body), s(l.result))
 }
 
-func (b *builderImpl) Lambda(typeParameters TypeParameters, parameters []Parameter, body Element) Lambda {
-	return &lambdaImpl{Location: b.Loc(), typeParameters: typeParameters, parameters: parameters, body: body}
+func (b *builderImpl) Lambda(parameters []Parameter, body Element, ret Element) Lambda {
+	return &lambdaImpl{Location: b.Loc(), parameters: parameters, body: body}
 }
 
 type intrinsicLambdaImpl struct {
 	location.Location
-	typeParameters TypeParameters
-	parameters     []Parameter
-	body           Element
-	result         Element
-}
-
-func (l *intrinsicLambdaImpl) TypeParameters() TypeParameters {
-	return l.typeParameters
+	parameters []Parameter
+	body       Element
+	result     Element
 }
 
 func (l *intrinsicLambdaImpl) Parameters() []Parameter {
@@ -1109,12 +868,12 @@ func (l *intrinsicLambdaImpl) IsIntrinsicLambda() bool {
 }
 
 func (l *intrinsicLambdaImpl) String() string {
-	return fmt.Sprintf("IntrinsicLambda(%s, typeParameters: %s, parameters: %s, body: %s, result: %s)", l.Location, s(l.typeParameters),
+	return fmt.Sprintf("IntrinsicLambda(%s, parameters: %s, body: %s, result: %s)", l.Location,
 		parametersToString(l.parameters), s(l.body), s(l.result))
 }
 
-func (b *builderImpl) IntrinsicLambda(typeParameters TypeParameters, parameters []Parameter, body Element, result Element) IntrinsicLambda {
-	return &intrinsicLambdaImpl{Location: b.Loc(), typeParameters: typeParameters, parameters: parameters, body: body, result: result}
+func (b *builderImpl) IntrinsicLambda(parameters []Parameter, body Element, result Element) IntrinsicLambda {
+	return &intrinsicLambdaImpl{Location: b.Loc(), parameters: parameters, body: body, result: result}
 }
 
 type loopImpl struct {
@@ -1195,74 +954,6 @@ func (b *builderImpl) Return(value Element) Return {
 	return &returnImpl{Location: b.Loc(), value: value}
 }
 
-type typeParametersImpl struct {
-	location.Location
-	parameters []TypeParameter
-	wheres     []Where
-}
-
-func (t *typeParametersImpl) Parameters() []TypeParameter {
-	return t.parameters
-}
-
-func (t *typeParametersImpl) Wheres() []Where {
-	return t.wheres
-}
-
-// LowerTypeParameters converts []TypeParameter to []Element
-func LowerTypeParameters(parameters []TypeParameter) []Element {
-	var result = make([]Element, len(parameters))
-	for i, e := range parameters {
-		result[i] = e
-	}
-	return result
-}
-
-// LowerWheres converst []Where to []Element
-func LowerWheres(parameters []Where) []Element {
-	var result = make([]Element, len(parameters))
-	for i, e := range parameters {
-		result[i] = e
-	}
-	return result
-}
-
-func (t *typeParametersImpl) String() string {
-	return fmt.Sprintf("TypeParameters(%s, parameters: %s, wheres: %s)", t.Location,
-		elementsToString(LowerTypeParameters(t.parameters)),
-		elementsToString(LowerWheres(t.wheres)))
-}
-
-func (b *builderImpl) TypeParameters(parameters []TypeParameter, wheres []Where) TypeParameters {
-	return &typeParametersImpl{Location: b.Loc(), parameters: parameters, wheres: wheres}
-}
-
-type typeParameterImpl struct {
-	location.Location
-	name       Name
-	constraint Element
-}
-
-func (t *typeParameterImpl) Name() Name {
-	return t.name
-}
-
-func (t *typeParameterImpl) Constraint() Element {
-	return t.constraint
-}
-
-func (t *typeParameterImpl) IsTypeParameter() bool {
-	return true
-}
-
-func (t *typeParameterImpl) String() string {
-	return fmt.Sprintf("TypeParameter(%s, name: %s, constraint: %s)", t.Location, s(t.name), s(t.constraint))
-}
-
-func (b *builderImpl) TypeParameter(name Name, constraint Element) TypeParameter {
-	return &typeParameterImpl{Location: b.Loc(), name: name, constraint: constraint}
-}
-
 type whenImpl struct {
 	location.Location
 	target  Element
@@ -1332,33 +1023,7 @@ func (b *builderImpl) WhenValueClause(value Element, body Element) WhenValueClau
 	return &whenValueClauseImpl{Location: b.Loc(), value: value, body: body}
 }
 
-type whereImpl struct {
-	location.Location
-	left  Element
-	right Element
-}
-
-func (w *whereImpl) Left() Element {
-	return w.left
-}
-
-func (w *whereImpl) Right() Element {
-	return w.right
-}
-
-func (w *whereImpl) IsWhere() bool {
-	return true
-}
-
-func (w *whereImpl) String() string {
-	return fmt.Sprintf("Where(%s, left: %s, right: %s)", w.Location, s(w.left), s(w.right))
-}
-
-func (b *builderImpl) Where(left, right Element) Where {
-	return &whereImpl{Location: b.Loc(), left: left, right: right}
-}
-
-type varDefinitionImpl struct {
+type storageImpl struct {
 	location.Location
 	name    Name
 	typ     Element
@@ -1366,59 +1031,64 @@ type varDefinitionImpl struct {
 	mutable bool
 }
 
-func (v *varDefinitionImpl) Name() Name {
+func (v *storageImpl) Name() Name {
 	return v.name
 }
 
-func (v *varDefinitionImpl) Type() Element {
+func (v *storageImpl) Type() Element {
 	return v.typ
 }
 
-func (v *varDefinitionImpl) Value() Element {
+func (v *storageImpl) Value() Element {
 	return v.value
 }
 
-func (v *varDefinitionImpl) Mutable() bool {
+func (v *storageImpl) Mutable() bool {
 	return v.mutable
 }
 
-func (v *varDefinitionImpl) IsField() bool {
+func (v *storageImpl) IsField() bool {
 	return true
 }
 
-func (v *varDefinitionImpl) String() string {
-	return fmt.Sprintf("VarDefinition(%s, name: %s, type: %s, value: %s, mutable: %v)", v.Location, s(v.name), s(v.typ), s(v.value),
+func (v *storageImpl) String() string {
+	return fmt.Sprintf("Storage(%s, name: %s, type: %s, value: %s, mutable: %v)", v.Location, s(v.name), s(v.typ), s(v.value),
 		v.mutable)
 }
 
-func (b *builderImpl) VarDefinition(name Name, typ Element, value Element, mutable bool) VarDefinition {
-	return &varDefinitionImpl{Location: b.Loc(), name: name, typ: typ, value: value, mutable: mutable}
+func (b *builderImpl) Storage(name Name, typ Element, value Element, mutable bool) Storage {
+	return &storageImpl{Location: b.Loc(), name: name, typ: typ, value: value, mutable: mutable}
 }
 
-type letDefinitionImpl struct {
+type definitionImpl struct {
 	location.Location
 	name  Element
+	typ   Element
 	value Element
 }
 
-func (l *letDefinitionImpl) Name() Element {
+func (l *definitionImpl) Name() Element {
 	return l.name
 }
 
-func (l *letDefinitionImpl) Value() Element {
+func (l *definitionImpl) Type() Element {
+	return l.typ
+}
+
+func (l *definitionImpl) Value() Element {
 	return l.value
 }
 
-func (l *letDefinitionImpl) IsLetDefinition() bool {
+func (l *definitionImpl) IsDefinition() bool {
 	return true
 }
 
-func (l *letDefinitionImpl) String() string {
-	return fmt.Sprintf("LetDefinition(%s, name: %s, value: %s)", l.Location, s(l.name), s(l.value))
+func (l *definitionImpl) String() string {
+	return fmt.Sprintf("Definition(%s, name: %s, type: %s, value: %s)", l.Location, s(l.name), s(l.typ), s(l.value))
 }
 
-func (b *builderImpl) LetDefinition(name Element, value Element) LetDefinition {
-	return &letDefinitionImpl{Location: b.Loc(), name: name, value: value}
+func (b *builderImpl) Definition(name, typ, value Element) Definition {
+	return &definitionImpl{Location: b.Loc(), name: name, typ: typ, value: value}
 }
 
 type typeLiteralImpl struct {
@@ -1516,27 +1186,6 @@ func (b *builderImpl) CallableTypeMember(parameters []Element, result Element) C
 	return &callableTypeMemberImpl{Location: b.Loc(), parameters: parameters, result: result}
 }
 
-type spreadTypeMemberImpl struct {
-	location.Location
-	reference Element
-}
-
-func (m *spreadTypeMemberImpl) Reference() Element {
-	return m.reference
-}
-
-func (m *spreadTypeMemberImpl) IsSpreadTypeMember() bool {
-	return true
-}
-
-func (m *spreadTypeMemberImpl) String() string {
-	return fmt.Sprintf("SpreadTypeMember(%s, reference: %s)", m.Location, s(m.reference))
-}
-
-func (b *builderImpl) SpreadTypeMember(reference Element) SpreadTypeMember {
-	return &spreadTypeMemberImpl{Location: b.Loc(), reference: reference}
-}
-
 type sequenceTypeImpl struct {
 	location.Location
 	elements Element
@@ -1556,27 +1205,6 @@ func (n *sequenceTypeImpl) String() string {
 
 func (b *builderImpl) SequenceType(elements Element) SequenceType {
 	return &sequenceTypeImpl{Location: b.Loc(), elements: elements}
-}
-
-type optionalTypeImpl struct {
-	location.Location
-	element Element
-}
-
-func (o *optionalTypeImpl) Element() Element {
-	return o.element
-}
-
-func (o *optionalTypeImpl) IsOptionalType() bool {
-	return true
-}
-
-func (o *optionalTypeImpl) String() string {
-	return fmt.Sprintf("OptionalType(%s, element: %s)", o.Location, s(o.element))
-}
-
-func (b *builderImpl) OptionalType(element Element) OptionalType {
-	return &optionalTypeImpl{Location: b.Loc(), element: element}
 }
 
 type vocabularyLiteralImpl struct {

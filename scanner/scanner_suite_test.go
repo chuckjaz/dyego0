@@ -74,10 +74,10 @@ var _ = Describe("scanner", func() {
 			Expect(s.End()).To(Equal(c.End()))
 		})
 		It("can scan an integer qualifier", func() {
-			scanString("1i", tokens.LiteralInt)
+			scanString("1i", tokens.Literal)
 		})
 		It("can scan a float qualifier", func() {
-			scanString("1f", tokens.LiteralFloat)
+			scanString("1f", tokens.Literal)
 		})
 		It("report an invalid float", func() {
 			scanString(strings.Repeat("9", 1000)+"f", tokens.Invalid)
@@ -86,15 +86,15 @@ var _ = Describe("scanner", func() {
 			scanString(strings.Repeat("9", 1000)+"d", tokens.Invalid)
 		})
 		It("can scan a double qualifier", func() {
-			scanString("1d 1.0d", tokens.LiteralDouble, tokens.LiteralDouble)
+			scanString("1d 1.0d", tokens.Literal, tokens.Literal)
 		})
 		It("can scan special runes", func() {
-			scanString("'\\0' '\\n' '\\r' '\\b' '\\t' '\\\\' '\\'' ''", tokens.LiteralRune, tokens.LiteralRune,
-				tokens.LiteralRune, tokens.LiteralRune, tokens.LiteralRune, tokens.LiteralRune, tokens.LiteralRune,
+			scanString("'\\0' '\\n' '\\r' '\\b' '\\t' '\\\\' '\\'' ''", tokens.Literal, tokens.Literal,
+				tokens.Literal, tokens.Literal, tokens.Literal, tokens.Literal, tokens.Literal,
 				tokens.Invalid)
 		})
 		It("can special runes in a string", func() {
-			scanString("\" \\\" \\r \\b \\\\ \"", tokens.LiteralString)
+			scanString("\" \\\" \\r \\b \\\\ \"", tokens.Literal)
 		})
 		It("can scan a escaped identifier", func() {
 			scanString(" `+` ", tokens.Identifier)
@@ -103,7 +103,7 @@ var _ = Describe("scanner", func() {
 			scanString(" `  \n", tokens.Invalid)
 		})
 		It("can scan a integer range", func() {
-			scanString("1..4", tokens.LiteralInt, tokens.Symbol, tokens.LiteralInt)
+			scanString("1..4", tokens.Literal, tokens.Symbol, tokens.Literal)
 		})
 		It("can indicate where the nl was", func() {
 			s := scannerOf("a b \n c d \n e")

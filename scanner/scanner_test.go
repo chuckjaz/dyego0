@@ -197,7 +197,7 @@ func TestStart(t *testing.T) {
 
 func TestInt(t *testing.T) {
 	scanner, token := scanOne(" 10 ")
-	if token != tokens.LiteralInt {
+	if token != tokens.Literal {
 		t.Error("Expected int literal")
 	}
 	if scanner.Value().(int) != 10 {
@@ -207,7 +207,7 @@ func TestInt(t *testing.T) {
 
 func TestLong(t *testing.T) {
 	scanner, token := scanOne(" 10l ")
-	if token != tokens.LiteralLong {
+	if token != tokens.Literal {
 		t.Error("Expected long literal")
 	}
 	if scanner.Value().(int64) != 10 {
@@ -217,7 +217,7 @@ func TestLong(t *testing.T) {
 
 func TestUInt(t *testing.T) {
 	scanner, token := scanOne(" 10u ")
-	if token != tokens.LiteralUInt {
+	if token != tokens.Literal {
 		t.Error("Expected uint literal")
 	}
 	if scanner.Value().(uint) != 10 {
@@ -227,7 +227,7 @@ func TestUInt(t *testing.T) {
 
 func TestULInt(t *testing.T) {
 	scanner, token := scanOne(" 10ul ")
-	if token != tokens.LiteralULong {
+	if token != tokens.Literal {
 		t.Error("Expected ulong literal")
 	}
 	if scanner.Value().(uint64) != 10 {
@@ -237,7 +237,7 @@ func TestULInt(t *testing.T) {
 
 func TestByte(t *testing.T) {
 	scanner, token := scanOne(" 10ub ")
-	if token != tokens.LiteralByte {
+	if token != tokens.Literal {
 		t.Error("Expected integer byte")
 	}
 	if scanner.Value().(byte) != byte(10) {
@@ -247,7 +247,7 @@ func TestByte(t *testing.T) {
 
 func TestFloat(t *testing.T) {
 	scanner, token := scanOne(" 10.1f ")
-	if token != tokens.LiteralFloat {
+	if token != tokens.Literal {
 		t.Error("Expected float literal")
 	}
 	if scanner.Value().(float32) != float32(10.1) {
@@ -257,7 +257,7 @@ func TestFloat(t *testing.T) {
 
 func TestDouble(t *testing.T) {
 	scanner, token := scanOne(" 10.1 ")
-	if token != tokens.LiteralDouble {
+	if token != tokens.Literal {
 		t.Error("Expected double literal")
 	}
 	if scanner.Value().(float64) != 10.1 {
@@ -279,17 +279,17 @@ func expectOne(t *testing.T, text string, expectedToken tokens.Token, expectedVa
 }
 
 func TestHex(t *testing.T) {
-	expectOne(t, " 0xABub ", tokens.LiteralByte, byte(0xAB))
-	expectOne(t, " 0xABCD ", tokens.LiteralInt, int32(0xABCD))
-	expectOne(t, " 0xABCDi ", tokens.LiteralInt, int32(0xABCD))
-	expectOne(t, " 0xABCDu ", tokens.LiteralUInt, uint32(0xABCD))
-	expectOne(t, " 0x1234567890ABCDl ", tokens.LiteralLong, int64(0x1234567890ABCD))
-	expectOne(t, " 0x1234567890ABCDul ", tokens.LiteralULong, uint64(0x1234567890ABCD))
+	expectOne(t, " 0xABub ", tokens.Literal, byte(0xAB))
+	expectOne(t, " 0xABCD ", tokens.Literal, int32(0xABCD))
+	expectOne(t, " 0xABCDi ", tokens.Literal, int32(0xABCD))
+	expectOne(t, " 0xABCDu ", tokens.Literal, uint32(0xABCD))
+	expectOne(t, " 0x1234567890ABCDl ", tokens.Literal, int64(0x1234567890ABCD))
+	expectOne(t, " 0x1234567890ABCDul ", tokens.Literal, uint64(0x1234567890ABCD))
 }
 
 func TestString(t *testing.T) {
 	scanner, token := scanOne(" \"this is a test\" ")
-	if token != tokens.LiteralString {
+	if token != tokens.Literal {
 		t.Error("Expected string literal")
 	}
 	if scanner.Value().(string) != "this is a test" {
@@ -299,7 +299,7 @@ func TestString(t *testing.T) {
 
 func TestStringEscapes(t *testing.T) {
 	scanner, token := scanOne(" \"[[ \\n \\b \\t \\\" ]]\" ")
-	if token != tokens.LiteralString {
+	if token != tokens.Literal {
 		t.Error("Expected string literal")
 	}
 	var received = scanner.Value().(string)
@@ -311,7 +311,7 @@ func TestStringEscapes(t *testing.T) {
 
 func testRuneValue(t *testing.T, text string, r rune) {
 	scanner, token := scanOne(text)
-	if token != tokens.LiteralRune {
+	if token != tokens.Literal {
 		t.Error("Expected rune literal")
 	}
 	var received = scanner.Value().(rune)

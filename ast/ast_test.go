@@ -24,60 +24,10 @@ var _ = Describe("ast", func() {
 			Expect(n.Text()).To(Equal("text"))
 			Expect(s(n)).To(Equal("Name(Location(0-1), text)"))
 		})
-		It("LiteralRune", func() {
-			n := b.LiteralRune('a')
+		It("Literal", func() {
+			n := b.Literal('a')
 			Expect(n.Value()).To(Equal('a'))
-			Expect(s(n)).To(Equal("LiteralRune(Location(0-1), 'a')"))
-		})
-		It("LiteralByte", func() {
-			n := b.LiteralByte(byte(42))
-			Expect(n.Value()).To(Equal(byte(42)))
-			Expect(s(n)).To(Equal("LiteralByte(Location(0-1), 42)"))
-		})
-		It("LiteralInt", func() {
-			n := b.LiteralInt(1)
-			Expect(n.Value()).To(Equal(1))
-			Expect(s(n)).To(Equal("LiteralInt(Location(0-1), 1)"))
-		})
-		It("LiteralUInt", func() {
-			n := b.LiteralUInt(uint(42))
-			Expect(n.Value()).To(Equal(uint(42)))
-			Expect(s(n)).To(Equal("LiteralUInt(Location(0-1), 42)"))
-		})
-		It("LiteralLong", func() {
-			n := b.LiteralLong(int64(42))
-			Expect(n.Value()).To(Equal(int64(42)))
-			Expect(s(n)).To(Equal("LiteralLong(Location(0-1), 42)"))
-		})
-		It("LiteralULong", func() {
-			n := b.LiteralULong(uint64(42))
-			Expect(n.Value()).To(Equal(uint64(42)))
-			Expect(s(n)).To(Equal("LiteralULong(Location(0-1), 42)"))
-		})
-		It("LiteralDouble", func() {
-			l := b.LiteralDouble(1.2)
-			Expect(l.Value()).To(BeNumerically("~", 1.2))
-			Expect(s(l)).To(Equal("LiteralDouble(Location(0-1), 1.2)"))
-		})
-		It("LitearlFloat", func() {
-			l := b.LiteralFloat(1.2)
-			Expect(l.Value()).To(BeNumerically("~", float32(1.2)))
-			Expect(s(l)).To(Equal("LiteralFloat(Location(0-1), 1.2)"))
-		})
-		It("LiteralBoolean", func() {
-			l := b.LiteralBoolean(true)
-			Expect(l.Value()).To(Equal(true))
-			Expect(s(l)).To(Equal("LiteralBoolean(Location(0-1), true)"))
-		})
-		It("LiteralString", func() {
-			l := b.LiteralString("value")
-			Expect(l.Value()).To(Equal("value"))
-			Expect(s(l)).To(Equal("LiteralString(Location(0-1), \"value\")"))
-		})
-		It("LiteralNull", func() {
-			l := b.LiteralNull()
-			Expect(l.IsNull()).To(Equal(true))
-			Expect(s(l)).To(Equal("LiteralNull(Location(0-1))"))
+			Expect(s(n)).To(Equal("Literal(Location(0-1), 'a')"))
 		})
 		It("Break", func() {
 			n := b.Break(nil)
@@ -112,11 +62,11 @@ var _ = Describe("ast", func() {
 		})
 		It("Call", func() {
 			var args []ast.Element
-			args = append(args, b.LiteralInt(1), b.LiteralInt(2))
+			args = append(args, b.Literal(1), b.Literal(2))
 			l := b.Call(nil, args)
 			Expect(l.Target()).To(BeNil())
 			Expect(l.Arguments()).To(Equal(args))
-			Expect(s(l)).To(Equal("Call(Location(0-1), target: nil, arguments: [LiteralInt(Location(0-1), 1), LiteralInt(Location(0-1), 2)])"))
+			Expect(s(l)).To(Equal("Call(Location(0-1), target: nil, arguments: [Literal(Location(0-1), 1), Literal(Location(0-1), 2)])"))
 		})
 		It("NamedArgument", func() {
 			l := b.NamedArgument(nil, nil)
@@ -148,27 +98,20 @@ var _ = Describe("ast", func() {
 			Expect(l.Value()).To(BeNil())
 			Expect(s(l)).To(Equal("NamedMemberInitializer(Location(0-1), name: Name(Location(0-1), name), type: nil, value: nil)"))
 		})
-		It("SpreadMemberInitializer", func() {
-			l := b.SpreadMemberInitializer(nil)
-			Expect(l.Target()).To(BeNil())
-			Expect(l.IsSpreadMemberInitializer()).To(Equal(true))
-			Expect(s(l)).To(Equal("SpreadMemberInitializer(Location(0-1), target: nil)"))
-		})
 		It("Lambda", func() {
 			l := b.Lambda(nil, nil, nil)
-			Expect(l.TypeParameters()).To(BeNil())
 			Expect(l.Parameters()).To(BeNil())
 			Expect(l.Body()).To(BeNil())
-			Expect(s(l)).To(Equal("Lambda(Location(0-1), typeParameters: nil, parameters: [], body: nil)"))
+			Expect(l.Result()).To(BeNil())
+			Expect(s(l)).To(Equal("Lambda(Location(0-1), parameters: [], body: nil, result: nil)"))
 		})
 		It("IntrinsicLambda", func() {
-			l := b.IntrinsicLambda(nil, nil, nil, nil)
-			Expect(l.TypeParameters()).To(BeNil())
+			l := b.IntrinsicLambda(nil, nil, nil)
 			Expect(l.Parameters()).To(BeNil())
 			Expect(l.Body()).To(BeNil())
 			Expect(l.Result()).To(BeNil())
 			Expect(l.IsIntrinsicLambda()).To(BeTrue())
-			Expect(s(l)).To(Equal("IntrinsicLambda(Location(0-1), typeParameters: nil, parameters: [], body: nil, result: nil)"))
+			Expect(s(l)).To(Equal("IntrinsicLambda(Location(0-1), parameters: [], body: nil, result: nil)"))
 		})
 		It("Loop", func() {
 			l := b.Loop(nil, nil)
@@ -191,19 +134,6 @@ var _ = Describe("ast", func() {
 			Expect(n.IsReturn()).To(BeTrue())
 			Expect(s(n)).To(Equal("Return(Location(0-1), value: nil)"))
 		})
-		It("TypeParameters", func() {
-			l := b.TypeParameters(nil, nil)
-			Expect(l.Parameters()).To(BeNil())
-			Expect(l.Wheres()).To(BeNil())
-			Expect(s(l)).To(Equal("TypeParameters(Location(0-1), parameters: [], wheres: [])"))
-		})
-		It("TypeParameter", func() {
-			l := b.TypeParameter(nil, nil)
-			Expect(l.Name()).To(BeNil())
-			Expect(l.Constraint()).To(BeNil())
-			Expect(l.IsTypeParameter()).To(Equal(true))
-			Expect(s(l)).To(Equal("TypeParameter(Location(0-1), name: nil, constraint: nil)"))
-		})
 		It("When", func() {
 			n := b.When(nil, nil)
 			Expect(n.Target()).To(BeNil())
@@ -223,28 +153,20 @@ var _ = Describe("ast", func() {
 			Expect(n.IsWhenValueClause()).To(BeTrue())
 			Expect(s(n)).To(Equal("WhenValueClause(Location(0-1), value: nil, body: nil)"))
 		})
-		It("Where", func() {
-			l := b.Where(nil, nil)
-			Expect(l.Left()).To(BeNil())
-			Expect(l.Right()).To(BeNil())
-			Expect(l.IsWhere()).To(Equal(true))
-			Expect(s(l)).To(Equal("Where(Location(0-1), left: nil, right: nil)"))
-		})
-		It("VarDefinition", func() {
-			l := b.VarDefinition(b.Name("name"), nil, nil, false)
+		It("Storage", func() {
+			l := b.Storage(b.Name("name"), nil, nil, false)
 			Expect(l.Name().Text()).To(Equal("name"))
 			Expect(l.Type()).To(BeNil())
 			Expect(l.Value()).To(BeNil())
 			Expect(l.Mutable()).To(Equal(false))
-			Expect(l.IsField()).To(Equal(true))
-			Expect(s(l)).To(Equal("VarDefinition(Location(0-1), name: Name(Location(0-1), name), type: nil, value: nil, mutable: false)"))
+			Expect(s(l)).To(Equal("Storage(Location(0-1), name: Name(Location(0-1), name), type: nil, value: nil, mutable: false)"))
 		})
-		It("LetDefinition", func() {
-			l := b.LetDefinition(nil, nil)
+		It("Definition", func() {
+			l := b.Definition(nil, nil, nil)
 			Expect(l.Name()).To(BeNil())
 			Expect(l.Value()).To(BeNil())
-			Expect(l.IsLetDefinition()).To(Equal(true))
-			Expect(s(l)).To(Equal("LetDefinition(Location(0-1), name: nil, value: nil)"))
+			Expect(l.IsDefinition()).To(Equal(true))
+			Expect(s(l)).To(Equal("Definition(Location(0-1), name: nil, type: nil, value: nil)"))
 		})
 		It("TypeLiteral", func() {
 			t := b.TypeLiteral(nil)
@@ -272,12 +194,6 @@ var _ = Describe("ast", func() {
 			Expect(m.Result()).To(BeNil())
 			Expect(s(m)).To(Equal("CallableTypeMember(Location(0-1), parameters: [], result: nil)"))
 		})
-		It("SpreadTypeMember", func() {
-			m := b.SpreadTypeMember(nil)
-			Expect(m.Reference()).To(BeNil())
-			Expect(m.IsSpreadTypeMember()).To(BeTrue())
-			Expect(s(m)).To(Equal("SpreadTypeMember(Location(0-1), reference: nil)"))
-		})
 		It("SequenceType", func() {
 			n := b.SequenceType(nil)
 			Expect(n.Elements()).To(BeNil())
@@ -286,9 +202,14 @@ var _ = Describe("ast", func() {
 		})
 		It("OptionalType", func() {
 			n := b.OptionalType(nil)
-			Expect(n.Element()).To(BeNil())
+			Expect(n.Target()).To(BeNil())
 			Expect(n.IsOptionalType()).To(BeTrue())
-			Expect(s(n)).To(Equal("OptionalType(Location(0-1), element: nil)"))
+			Expect(s(n)).To(Equal("OptionalType(Location(0-1), target: nil"))
+		})
+		It("ReferenceType", func() {
+			n := b.ReferenceType(nil)
+			Expect(n.Referent()).To(BeNil())
+			Expect(s(n)).To(Equal("ReferenceType(Location(0-1), referent: nil)"))
 		})
 		It("VocabularyLiteral", func() {
 			l := b.VocabularyLiteral(nil)
