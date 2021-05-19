@@ -33,10 +33,7 @@ when-clause:                        expression ARROW LBRACK sequence RBRACK |
 literal:                            LIT_STRING | LIT_RUNE | LIT_INT | LIT_BYTE | LIT_UINT | LIT_LONG | LIT_ULONG |
                                     LIT_FLOAT | LIT_DOUBLE | TRUE | FALSE | NULL
 
-type-literal:                       LT [type-parameter-clause BAR] [type-members] GT
-type-parameter-clause:              type-parameters where-clause*
-type-parameters:                    type-parameter (COMMA type-parameter)* [COMMA]
-type-parameter:                     NAME [COLON name-reference]
+type-literal:                       LT [type-members] GT
 type-members:                       type-member (COMMA type-member)* [COMMA]
 type-member:                        identifier-list COLON type-reference
 where-clause:                       WHERE type-reference EQ type-reference
@@ -54,7 +51,7 @@ vocabular-names:                    NAME |
                                     LPAREN identifier-list RPAREN
 vocabulary-precedece-qualifier:     (BEFORE | AFTER) [INFIX | PREFIX | POSTFIX] NAME
 
-lambda-type-literal:                LBRACE [type-parameter-clause BAR] [formal-parameters] RBRACE AS type-reference
+lambda-type-literal:                LBRACE [formal-parameters] RBRACE AS type-reference
 
 type-primitive:                     NAME |
                                     type-literal |
@@ -84,7 +81,7 @@ member-initializers:                member-initializer (COMMA member-initializer
 member-initializer:                 NAME COLON expression |
                                     COLON expression |
                                     SPLAT expression
-lambda:                             RBRACE [type-parameters-clause BAR] [formal-parameters ARROW] sequence LBRACE
+lambda:                             RBRACE [formal-parameters ARROW] sequence LBRACE
 formal-parameters:                  formal-parameter (COMMA formal-parameter)*
 formal-parameter:                   NAME [ COLON type-reference ]
 

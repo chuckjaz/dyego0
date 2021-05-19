@@ -25,7 +25,7 @@ var _ = Describe("parser", func() {
 		return b
 	}
 	i := func(n ast.Element, value int) {
-		v, ok := n.(ast.LiteralInt)
+		v, ok := n.(ast.Literal)
 		Expect(ok).To(BeTrue())
 		Expect(v.Value()).To(Equal(value))
 	}
@@ -36,62 +36,62 @@ var _ = Describe("parser", func() {
 	}
 	Describe("literals", func() {
 		It("can parse a rune", func() {
-			l, ok := parse("'a'").(ast.LiteralRune)
+			l, ok := parse("'a'").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal('a'))
 		})
 		It("can parse a byte", func() {
-			l, ok := parse("42ub").(ast.LiteralByte)
+			l, ok := parse("42ub").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(byte(42)))
 		})
 		It("can parse an int", func() {
-			l, ok := parse("123").(ast.LiteralInt)
+			l, ok := parse("123").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(123))
 		})
 		It("can parse a uint", func() {
-			l, ok := parse("42u").(ast.LiteralUInt)
+			l, ok := parse("42u").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(uint(42)))
 		})
 		It("can parse a long", func() {
-			l, ok := parse("42l").(ast.LiteralLong)
+			l, ok := parse("42l").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(int64(42)))
 		})
 		It("can parse a unsigned long", func() {
-			l, ok := parse("42ul").(ast.LiteralULong)
+			l, ok := parse("42ul").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(uint64(42)))
 		})
 		It("can parse a float", func() {
-			l, ok := parse("1.0f").(ast.LiteralFloat)
+			l, ok := parse("1.0f").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(BeNumerically("~", float32(1.0)))
 		})
 		It("can parse a double", func() {
-			l, ok := parse("1.0").(ast.LiteralDouble)
+			l, ok := parse("1.0").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(1.0))
 		})
 		It("can parse a string", func() {
-			l, ok := parse("\"a\"").(ast.LiteralString)
+			l, ok := parse("\"a\"").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal("a"))
 		})
 		It("can parse true", func() {
-			l, ok := parse("true").(ast.LiteralBoolean)
+			l, ok := parse("true").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(true))
 		})
 		It("can parse false", func() {
-			l, ok := parse("false").(ast.LiteralBoolean)
+			l, ok := parse("false").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(false))
 		})
 		It("can parse a parenthesised expression", func() {
-			l, ok := parse("(10)").(ast.LiteralInt)
+			l, ok := parse("(10)").(ast.Literal)
 			Expect(ok).To(Equal(true))
 			Expect(l.Value()).To(Equal(10))
 		})
@@ -147,7 +147,7 @@ var _ = Describe("parser", func() {
 			})
 			It("can parse a member spread", func() {
 				o := ro("[...a]")
-				s := o.Members()[0].(ast.SpreadMemberInitializer)
+				s := o.Members()[0].(ast.Spread)
 				n(s.Target(), "a")
 			})
 		})
@@ -295,22 +295,10 @@ var _ = Describe("parser", func() {
 			return b().Parameter(b().Name(name), nil, nil)
 		}
 		pd := func(name string) ast.Parameter {
-			return b().Parameter(b().Name(name), nil, b().LiteralInt(42))
-		}
-		pt := func(name string, typ string) ast.Parameter {
-			return b().Parameter(b().Name(name), b().Name(typ), nil)
+			return b().Parameter(b().Name(name), nil, b().Literal(42))
 		}
 		ptd := func(name string, typ string) ast.Parameter {
-			return b().Parameter(b().Name(name), b().Name(typ), b().LiteralInt(42))
-		}
-		tp := func(name string) ast.TypeParameter {
-			return b().TypeParameter(b().Name(name), nil)
-		}
-		tpc := func(name, constraint string) ast.TypeParameter {
-			return b().TypeParameter(b().Name(name), b().Name(constraint))
-		}
-		w := func(left, right string) ast.Where {
-			return b().Where(b().Name(left), b().Name(right))
+			return b().Parameter(b().Name(name), b().Name(typ), b().Literal(42))
 		}
 		expectParameter := func(parameter, expected ast.Parameter) {
 			Expect(parameter.Name().Text()).To(Equal(expected.Name().Text()))
@@ -328,34 +316,8 @@ var _ = Describe("parser", func() {
 				expectParameter(parameters[i], expected[i])
 			}
 		}
-		expectTypeParameter := func(parameter, expected ast.TypeParameter) {
-			Expect(parameter.Name().Text()).To(Equal(expected.Name().Text()))
-			if expected.Constraint() != nil {
-				c := expected.Constraint().(ast.Name)
-				expectName(parameter.Constraint(), c.Text())
-			}
-		}
-		expectTypeParameters := func(parameters ast.TypeParameters, expected ...ast.TypeParameter) {
-			Expect(len(parameters.Parameters())).To(Equal(len(expected)))
-			for i := 0; i < len(expected); i++ {
-				expectTypeParameter(parameters.Parameters()[i], expected[i])
-			}
-		}
-		expectWhere := func(where, expected ast.Where) {
-			left := expected.Left().(ast.Name).Text()
-			right := expected.Right().(ast.Name).Text()
-			expectName(where.Left(), left)
-			expectName(where.Right(), right)
-		}
-		expectWheres := func(parameters ast.TypeParameters, expected ...ast.Where) {
-			Expect(len(parameters.Wheres())).To(Equal(len(expected)))
-			for i := 0; i < len(expected); i++ {
-				expectWhere(parameters.Wheres()[i], expected[i])
-			}
-		}
 		It("can parse an empty lambda", func() {
 			l := lambda("{}")
-			expectNil(l.TypeParameters())
 			expectNil(l.Parameters())
 			expectNil(l.Body())
 		})
@@ -382,37 +344,6 @@ var _ = Describe("parser", func() {
 			l := lambda("{ a: Int = 42 -> a }")
 			expectName(l.Body(), "a")
 			expectParameters(l.Parameters(), ptd("a", "Int"))
-		})
-		It("can parse a lambda with a type parameter", func() {
-			l := lambda("{ A | a: A -> a }")
-			expectName(l.Body(), "a")
-			expectTypeParameters(l.TypeParameters(), tp("A"))
-			expectParameters(l.Parameters(), pt("a", "A"))
-		})
-		It("can parse a lambda with multimple type parameters", func() {
-			l := lambda("{ A, B | a: A, b: B -> 42 }")
-			expectNumber(l.Body(), 42)
-			expectTypeParameters(l.TypeParameters(), tp("A"), tp("B"))
-			expectParameters(l.Parameters(), pt("a", "A"), pt("b", "B"))
-		})
-		It("can parse a type parameter with a constraint", func() {
-			l := lambda("{ A: Int | a: A -> a }")
-			expectName(l.Body(), "a")
-			expectTypeParameters(l.TypeParameters(), tpc("A", "Int"))
-		})
-		It("can parse a type where clause", func() {
-			l := lambda("{ A where A = Int | a: A -> a }")
-			expectName(l.Body(), "a")
-			expectWheres(l.TypeParameters(), w("A", "Int"))
-		})
-		It("can parser multiple where classes", func() {
-			l := lambda("{ A, B where A = Int where B = A | a: A -> a }")
-			expectName(l.Body(), "a")
-			expectWheres(l.TypeParameters(), w("A", "Int"), w("B", "A"))
-		})
-		It("can parse type parameter with a trailing comma", func() {
-			l := lambda("{ A, | a: A -> a }")
-			expectTypeParameters(l.TypeParameters(), tp("A"))
 		})
 	})
 	Describe("statements", func() {
@@ -505,7 +436,7 @@ var _ = Describe("parser", func() {
 	})
 	Describe("types", func() {
 		t := func(text string) ast.Element {
-			v, ok := parse("var a: " + text).(ast.VarDefinition)
+			v, ok := parse("var a: " + text).(ast.Storage)
 			Expect(ok).To(BeTrue())
 			return v.Type()
 		}
@@ -531,7 +462,7 @@ var _ = Describe("parser", func() {
 				ty := t("A?")
 				ot, ok := ty.(ast.OptionalType)
 				Expect(ok).To(BeTrue())
-				n(ot.Element(), "A")
+				n(ot.Target(), "A")
 			})
 		})
 		Describe("type literal", func() {
@@ -588,7 +519,7 @@ var _ = Describe("parser", func() {
 	})
 	Describe("vocabulary", func() {
 		vocab := func(source string) ast.VocabularyLiteral {
-			l, ok := parse("let v = " + source).(ast.LetDefinition)
+			l, ok := parse("let v = " + source).(ast.Definition)
 			Expect(ok).To(Equal(true))
 			v, ok := l.Value().(ast.VocabularyLiteral)
 			return v
@@ -794,8 +725,8 @@ var _ = Describe("parser", func() {
 		})
 	})
 	Describe("locals", func() {
-		dec := func(text string) ast.VarDefinition {
-			v, ok := parse(text).(ast.VarDefinition)
+		dec := func(text string) ast.Storage {
+			v, ok := parse(text).(ast.Storage)
 			Expect(ok).To(BeTrue())
 			return v
 		}
@@ -917,7 +848,7 @@ func printErrors(errs []errors.Error, fs tokens.FileSet, text string) {
 
 func parseVocabulary(source, filename string) vocabulary {
 	element := parseNamed(source, filename, newVocabularyScope())
-	let := element.(ast.LetDefinition)
+	let := element.(ast.Definition)
 	vl := let.Value().(ast.VocabularyLiteral)
 	emptyScope := newVocabularyScope()
 	v, errors := buildVocabulary(emptyScope, vl)
@@ -971,7 +902,7 @@ loop:
 }
 
 func expectNumber(element ast.Element, value int) {
-	n, ok := element.(ast.LiteralInt)
+	n, ok := element.(ast.Literal)
 	Expect(ok).To(Equal(true))
 	Expect(n.Value()).To(Equal(value))
 }

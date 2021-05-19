@@ -28,7 +28,7 @@ func (v *enterVisitor) Visit(element ast.Element) bool {
 	case ast.Sequence:
 		v.Visit(n.Left())
 		v.Visit(n.Right())
-	case ast.LetDefinition:
+	case ast.Definition:
 		if isTypeDeclaration(n) {
 			name, ok := n.Name().(ast.Name)
 			if ok {
@@ -39,7 +39,7 @@ func (v *enterVisitor) Visit(element ast.Element) bool {
 	return true
 }
 
-func isTypeDeclaration(declaration ast.LetDefinition) bool {
+func isTypeDeclaration(declaration ast.Definition) bool {
 	_, ok := declaration.Value().(ast.TypeLiteral)
 	return ok
 }

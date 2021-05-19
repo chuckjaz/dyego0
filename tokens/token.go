@@ -16,32 +16,8 @@ const (
 	// Symbol is a string of special symbols typecially used as operators (e.g. +, -, !=, etc.)
 	Symbol
 
-	// LiteralString is a string literal (e.g. "string")
-	LiteralString
-
-	// LiteralRune is a rune literal (e.g. 'b')
-	LiteralRune
-
-	// LiteralInt is a literal integer (e.g. 12345)
-	LiteralInt
-
-	// LiteralByte is a literal byte (e.g. 27b)
-	LiteralByte
-
-	// LiteralUInt is a literal unsigned int (e.g. 23u)
-	LiteralUInt
-
-	// LiteralLong is a literal long (e.g. 122233322l)
-	LiteralLong
-
-	// LiteralULong is a literal unsigned long (e.g. 12332323ul)
-	LiteralULong
-
-	// LiteralFloat is a literal float (e.g. 123.5f)
-	LiteralFloat
-
-	// LiteralDouble is a literal double (e.g. 123.5)
-	LiteralDouble
+	// Literal is a literal token
+	Literal
 
 	// LParen '('
 	LParen
@@ -124,15 +100,7 @@ var tokens = [...]string{
 	EOF:             "<eof>",
 	Identifier:      "<identifier>",
 	Symbol:          "<symbol>",
-	LiteralByte:     "<byte>",
-	LiteralInt:      "<int>",
-	LiteralUInt:     "<uint>",
-	LiteralLong:     "<long>",
-	LiteralULong:    "<ulong>",
-	LiteralFloat:    "<float>",
-	LiteralDouble:   "<double>",
-	LiteralString:   "<string>",
-	LiteralRune:     "<rune>",
+	Literal:         "<literal>",
 	LParen:          "(",
 	RParen:          ")",
 	LBrack:          "[",
