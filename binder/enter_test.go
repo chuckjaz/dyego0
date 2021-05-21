@@ -40,6 +40,17 @@ var _ = Describe("enter", func() {
 		Expect(len(context.Errors)).To(Equal(1))
 		Expect(context.Errors[0].Error()).To(Equal("Duplicate symbol"))
 	})
+	It("should be able to enter nested types", func() {
+		context := binder.NewContext()
+		element := parse("let a = < a: Int, b = < a: Int > >")
+		context.Enter(element)
+		aSym, ok := context.Scope.Find("a")
+		Expect(ok).To(BeTrue())
+		bBuilder, ok := context.Builders[aSym]
+		Expect(ok).To(BeTrue())
+		_, ok = bBuilder.Find("b")
+		Expect(ok).To(BeTrue())
+	})
 })
 
 func recordLines(fb tokens.FileBuilder, text string) {

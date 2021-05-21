@@ -19,6 +19,8 @@ type Scope interface {
 
 // ScopeBuilder is used to build a scope.
 type ScopeBuilder interface {
+	Scope
+
 	// Enter enters a symbol into scope, Returns the symbol and true if it not already in the table
 	// or the prevoius symbol and false, it the symbol already exists.
 	Enter(symbol Symbol) (Symbol, bool)
@@ -68,11 +70,9 @@ func (s *scopeBuilder) Enter(symbol Symbol) (Symbol, bool) {
 	if ok {
 		return previous, false
 	}
-	if s.base != nil {
-		previous, ok := s.base.Find(name)
-		if ok {
-			return previous, false
-		}
+	previous, ok = s.base.Find(name)
+	if ok {
+		return previous, false
 	}
 	s.table[name] = symbol
 	return symbol, true
@@ -82,10 +82,38 @@ func (s *scopeBuilder) Reenter(symbol Symbol) {
 	s.table[symbol.Name()] = symbol
 }
 
+func (s *scopeBuilder) Find(name string) (Symbol, bool) {
+	r, ok := s.table[name]
+	if ok {
+		return r, true
+	}
+	r, ok = s.base.Find(name)
+	return r, ok
+}
+
+func (s *scopeBuilder) Contains(name string) bool {
+	_, ok := s.table[name]
+	if ok {
+		return true
+	}
+	ok = s.base.Contains(name)
+	return ok
+}
+
+func (s *scopeBuilder) ForEach(block func(Symbol) bool) {
+	for _, symbol := range s.table {
+		if block(symbol) {
+			return
+		}
+	}
+	s.base.ForEach(block)
+}
+
 func (s *scopeBuilder) Build() Scope {
 	table := s.table
 	s.table = nil
-	if s.base == nil {
+	_, ok := s.base.(emptyScope)
+	if ok {
 		return newScope(table)
 	}
 	return newMultiScope(newScope(table), s.base)
@@ -99,14 +127,14 @@ func NewBuilderFrom(base Scope) ScopeBuilder {
 		for k, v := range s.table {
 			table[k] = v
 		}
-		base = nil
+		base = emptyScope{}
 	}
 	return &scopeBuilder{table: table, base: base}
 }
 
 // NewBuilder create an empty symbol table builder
 func NewBuilder() ScopeBuilder {
-	return &scopeBuilder{table: make(map[string]Symbol)}
+	return &scopeBuilder{table: make(map[string]Symbol), base: emptyScope{}}
 }
 
 type multiScope struct {

@@ -110,6 +110,7 @@ type NamedMemberInitializer interface {
 	Name() Name
 	Type() Element
 	Value() Element
+	IsNamedMemberInitializer() bool
 }
 
 // Lambda is a lambda
@@ -194,27 +195,11 @@ type Storage interface {
 	Mutable() bool
 }
 
-// TypeLiteral is a type literal
+// TypeLiteral a type literal
 type TypeLiteral interface {
 	Element
 	Members() []Element
 	IsTypeLiteral() bool
-}
-
-// TypeLiteralMember is a type literal member
-type TypeLiteralMember interface {
-	Element
-	Name() Name
-	Type() Element
-	IsTypeLiteralMember() bool
-}
-
-// TypeLiteralConstant is a type literal constant
-type TypeLiteralConstant interface {
-	Element
-	Name() Name
-	Value() Element
-	IsTypeLiteralConstant() bool
 }
 
 // CallableTypeMember is a callable type literal member
@@ -380,8 +365,6 @@ type Builder interface {
 	Definition(name Element, typ Element, value Element) Definition
 	Storage(name Name, typ Element, value Element, mutable bool) Storage
 	TypeLiteral(members []Element) TypeLiteral
-	TypeLiteralConstant(name Name, value Element) TypeLiteralConstant
-	TypeLiteralMember(name Name, typ Element) TypeLiteralMember
 	CallableTypeMember(parameters []Element, result Element) CallableTypeMember
 	SequenceType(elements Element) SequenceType
 	OptionalType(target Element) OptionalType
@@ -470,7 +453,7 @@ func sOf(value interface{}) string {
 	case uint:
 		return fmt.Sprintf("%du", v)
 	case int64:
-		return fmt.Sprintf("%d", v)
+		return fmt.Sprintf("%dl", v)
 	case float32:
 		return fmt.Sprintf("%ff", v)
 	case float64:
@@ -795,6 +778,10 @@ func (n *namedMemberInitializerImpl) String() string {
 		s(n.typ), s(n.value))
 }
 
+func (n *namedMemberInitializerImpl) IsNamedMemberInitializer() bool {
+	return true
+}
+
 func (b *builderImpl) NamedMemberInitializer(name Name, typ Element, value Element) NamedMemberInitializer {
 	return &namedMemberInitializerImpl{Location: b.Loc(), name: name, typ: typ, value: value}
 }
@@ -1047,10 +1034,6 @@ func (v *storageImpl) Mutable() bool {
 	return v.mutable
 }
 
-func (v *storageImpl) IsField() bool {
-	return true
-}
-
 func (v *storageImpl) String() string {
 	return fmt.Sprintf("Storage(%s, name: %s, type: %s, value: %s, mutable: %v)", v.Location, s(v.name), s(v.typ), s(v.value),
 		v.mutable)
@@ -1110,58 +1093,6 @@ func (t *typeLiteralImpl) String() string {
 
 func (b *builderImpl) TypeLiteral(members []Element) TypeLiteral {
 	return &typeLiteralImpl{Location: b.Loc(), members: members}
-}
-
-type typeLiteralConstantImpl struct {
-	location.Location
-	name  Name
-	value Element
-}
-
-func (t *typeLiteralConstantImpl) Name() Name {
-	return t.name
-}
-
-func (t *typeLiteralConstantImpl) Value() Element {
-	return t.value
-}
-
-func (t *typeLiteralConstantImpl) IsTypeLiteralConstant() bool {
-	return true
-}
-
-func (t *typeLiteralConstantImpl) String() string {
-	return fmt.Sprintf("TypeLiteralConstant(%s, name: %s, value: %s)", t.Location, s(t.name), s(t.value))
-}
-
-func (b *builderImpl) TypeLiteralConstant(name Name, value Element) TypeLiteralConstant {
-	return &typeLiteralConstantImpl{Location: b.Loc(), name: name, value: value}
-}
-
-type typeLiteralMemberImpl struct {
-	location.Location
-	name Name
-	typ  Element
-}
-
-func (m *typeLiteralMemberImpl) Name() Name {
-	return m.name
-}
-
-func (m *typeLiteralMemberImpl) Type() Element {
-	return m.typ
-}
-
-func (m *typeLiteralMemberImpl) IsTypeLiteralMember() bool {
-	return true
-}
-
-func (m *typeLiteralMemberImpl) String() string {
-	return fmt.Sprintf("TypeLiteralMember(%s, name: %s, type: %s)", m.Location, s(m.name), s(m.typ))
-}
-
-func (b *builderImpl) TypeLiteralMember(name Name, typ Element) TypeLiteralMember {
-	return &typeLiteralMemberImpl{Location: b.Loc(), name: name, typ: typ}
 }
 
 type callableTypeMemberImpl struct {

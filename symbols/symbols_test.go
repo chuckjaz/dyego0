@@ -22,13 +22,17 @@ func sym(name string) symbols.Symbol {
 	return fakeSymbol{name: name}
 }
 
-func scope(names ...string) symbols.Scope {
+func builder(names ...string) symbols.ScopeBuilder {
 	b := symbols.NewBuilder()
 	for _, name := range names {
 		_, ok := b.Enter(sym(name))
 		Expect(ok).To(BeTrue())
 	}
-	return b.Build()
+	return b
+}
+
+func scope(names ...string) symbols.Scope {
+	return builder(names...).Build()
 }
 
 func symsFrom(scope symbols.Scope, names ...string) symArray {
@@ -67,6 +71,19 @@ var _ = Describe("symbols", func() {
 		expect(s, "a", "b", "c")
 		_, ok := s.Find("d")
 		Expect(ok).To(BeFalse())
+	})
+	It("can find a symbol in a scope builder", func() {
+		s := builder("a", "b", "c")
+		expect(s, "a", "b", "c")
+		_, ok := s.Find("d")
+		Expect(ok).To(BeFalse())
+	})
+	It("can find a symbol in scope builder base", func() {
+		s1 := scope("a")
+		s2 := scope("b")
+		m := symbols.Merge(s1, s2)
+		b := symbols.NewBuilderFrom(m)
+		Expect(b.Contains("a")).To(BeTrue())
 	})
 	It("can detect a duplicate symbol", func() {
 		b := symbols.NewBuilder()
@@ -130,8 +147,31 @@ var _ = Describe("symbols", func() {
 		sort.Sort(syms)
 		Expect(syms).To(Equal(symsFrom(s, "a", "b", "c")))
 	})
-	It("can terminate ForEach early", func() {
+	It("can enumerate a single scope builder", func() {
+		s := builder("a", "b", "c")
+		var syms symArray
+		s.ForEach(func(symbol symbols.Symbol) bool {
+			syms = append(syms, symbol)
+			return false
+		})
+		sort.Sort(syms)
+		Expect(syms).To(Equal(symsFrom(s, "a", "b", "c")))
+	})
+	It("can terminate scope ForEach early", func() {
 		s := scope("a", "b", "c")
+		var sym symbols.Symbol
+		s.ForEach(func(symbol symbols.Symbol) bool {
+			if symbol.Name() == "b" {
+				sym = symbol
+				return true
+			}
+			return false
+		})
+		expected, _ := s.Find("b")
+		Expect(sym).To(Equal(expected))
+	})
+	It("can terminate builder ForEach early", func() {
+		s := builder("a", "b", "c")
 		var sym symbols.Symbol
 		s.ForEach(func(symbol symbols.Symbol) bool {
 			if symbol.Name() == "b" {

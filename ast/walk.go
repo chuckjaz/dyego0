@@ -73,10 +73,6 @@ func WalkChildren(element Element, visitor Visitor) bool {
 			return Walk(e.Name(), visitor) && Walk(e.Type(), visitor) && Walk(e.Value(), visitor)
 		case TypeLiteral:
 			return walkElements(e.Members(), visitor)
-		case TypeLiteralMember:
-			return Walk(e.Name(), visitor) && Walk(e.Type(), visitor)
-		case TypeLiteralConstant:
-			return Walk(e.Name(), visitor) && Walk(e.Value(), visitor)
 		case CallableTypeMember:
 			return walkElements(e.Parameters(), visitor) && Walk(e.Result(), visitor)
 		case SequenceType:

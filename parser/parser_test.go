@@ -471,8 +471,8 @@ var _ = Describe("parser", func() {
 				Expect(ok).To(BeTrue())
 				return r
 			}
-			tm := func(e ast.Element) ast.TypeLiteralMember {
-				r, ok := e.(ast.TypeLiteralMember)
+			tm := func(e ast.Element) ast.Storage {
+				r, ok := e.(ast.Storage)
 				Expect(ok).To(BeTrue())
 				return r
 			}

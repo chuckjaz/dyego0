@@ -28,6 +28,14 @@ var _ = Describe("ast", func() {
 			n := b.Literal('a')
 			Expect(n.Value()).To(Equal('a'))
 			Expect(s(n)).To(Equal("Literal(Location(0-1), 'a')"))
+			Expect(s(b.Literal(1))).To(Equal("Literal(Location(0-1), 1)"))
+			Expect(s(b.Literal(byte(1)))).To(Equal("Literal(Location(0-1), 1b)"))
+			Expect(s(b.Literal(uint(1)))).To(Equal("Literal(Location(0-1), 1u)"))
+			Expect(s(b.Literal(int64(1)))).To(Equal("Literal(Location(0-1), 1l)"))
+			Expect(s(b.Literal(float32(1.0)))).To(Equal("Literal(Location(0-1), 1.000000f)"))
+			Expect(s(b.Literal(1.0))).To(Equal("Literal(Location(0-1), 1.000000)"))
+			Expect(s(b.Literal("a"))).To(Equal("Literal(Location(0-1), \"a\")"))
+			Expect(s(b.Literal(uintptr(1)))).To(Equal("Literal(Location(0-1), %!s(uintptr=1))"))
 		})
 		It("Break", func() {
 			n := b.Break(nil)
@@ -96,6 +104,7 @@ var _ = Describe("ast", func() {
 			Expect(l.Name().Text()).To(Equal("name"))
 			Expect(l.Type()).To(BeNil())
 			Expect(l.Value()).To(BeNil())
+			Expect(l.IsNamedMemberInitializer()).To(BeTrue())
 			Expect(s(l)).To(Equal("NamedMemberInitializer(Location(0-1), name: Name(Location(0-1), name), type: nil, value: nil)"))
 		})
 		It("Lambda", func() {
@@ -173,20 +182,6 @@ var _ = Describe("ast", func() {
 			Expect(t.Members()).To(BeNil())
 			Expect(t.IsTypeLiteral()).To(BeTrue())
 			Expect(s(t)).To(Equal("TypeLiteral(Location(0-1), members: [])"))
-		})
-		It("TypeLiteralConstant", func() {
-			t := b.TypeLiteralConstant(nil, nil)
-			Expect(t.Name()).To(BeNil())
-			Expect(t.Value()).To(BeNil())
-			Expect(t.IsTypeLiteralConstant()).To(BeTrue())
-			Expect(s(t)).To(Equal("TypeLiteralConstant(Location(0-1), name: nil, value: nil)"))
-		})
-		It("TypeLiteralMember", func() {
-			m := b.TypeLiteralMember(nil, nil)
-			Expect(m.Name()).To(BeNil())
-			Expect(m.Type()).To(BeNil())
-			Expect(m.IsTypeLiteralMember()).To(BeTrue())
-			Expect(s(m)).To(Equal("TypeLiteralMember(Location(0-1), name: nil, type: nil)"))
 		})
 		It("CallableTypeMember", func() {
 			m := b.CallableTypeMember(nil, nil)

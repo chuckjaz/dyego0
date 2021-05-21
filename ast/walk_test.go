@@ -87,12 +87,6 @@ var _ = Describe("walk", func() {
 	It("TypeLiteral", func() {
 		expect(b.TypeLiteral([]ast.Element{n}), n)
 	})
-	It("TypeLiteralConstant", func() {
-		expect(b.TypeLiteralConstant(n, one), n, one)
-	})
-	It("TypeLiteralMember", func() {
-		expect(b.TypeLiteralMember(n, m), n, m)
-	})
 	It("CallableTypeMember", func() {
 		expect(b.CallableTypeMember([]ast.Element{param}, m), param, n, m, one, m)
 	})

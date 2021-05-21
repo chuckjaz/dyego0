@@ -8,12 +8,13 @@ import (
 )
 
 type enterVisitor struct {
-	scope  symbols.ScopeBuilder
-	errors []errors.Error
+	scope    symbols.ScopeBuilder
+	builders map[symbols.Symbol]symbols.ScopeBuilder
+	errors   []errors.Error
 }
 
-func newEnterVisitor(scope symbols.ScopeBuilder) *enterVisitor {
-	return &enterVisitor{scope: scope}
+func newEnterVisitor(scope symbols.ScopeBuilder, builders map[symbols.Symbol]symbols.ScopeBuilder) *enterVisitor {
+	return &enterVisitor{scope: scope, builders: builders}
 }
 
 func (v *enterVisitor) enterSymbol(symbol symbols.Symbol, node ast.Element) {
@@ -24,17 +25,29 @@ func (v *enterVisitor) enterSymbol(symbol symbols.Symbol, node ast.Element) {
 }
 
 func (v *enterVisitor) Visit(element ast.Element) bool {
-	switch n := element.(type) {
-	case ast.Sequence:
-		v.Visit(n.Left())
-		v.Visit(n.Right())
-	case ast.Definition:
-		if isTypeDeclaration(n) {
-			name, ok := n.Name().(ast.Name)
+	for {
+		switch n := element.(type) {
+		case ast.Sequence:
+			v.Visit(n.Left())
+			element = n.Right() // Simulated tail call
+			continue
+		case ast.Definition:
+			typ, ok := n.Value().(ast.TypeLiteral)
 			if ok {
-				v.enterSymbol(types.NewTypeSymbol(name.Text(), nil), n)
+				name, ok := n.Name().(ast.Name)
+				if ok {
+					typSym := types.NewTypeSymbol(name.Text(), nil)
+					v.enterSymbol(typSym, n)
+					typeScope := symbols.NewBuilder()
+					v.builders[typSym] = typeScope
+					nestedEnter := newEnterVisitor(typeScope, v.builders)
+					for _, member := range typ.Members() {
+						nestedEnter.Visit(member)
+					}
+				}
 			}
 		}
+		break
 	}
 	return true
 }
@@ -46,7 +59,7 @@ func isTypeDeclaration(declaration ast.Definition) bool {
 
 // Enter enters the types declared a the root of emement into the scope
 func (c *BindingContext) Enter(element ast.Element) {
-	v := newEnterVisitor(c.Scope)
+	v := newEnterVisitor(c.Scope, c.Builders)
 	v.Visit(element)
 	c.Errors = append(c.Errors, v.errors...)
 }
