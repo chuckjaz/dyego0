@@ -1030,16 +1030,20 @@ func (p *parser) typeLiteralMember() ast.Element {
 	case tokens.Colon:
 		p.next()
 		typ := p.typeReference()
-		return p.builder.TypeLiteralMember(name, typ)
+		return p.builder.Storage(name, typ, nil, false)
 	case tokens.Symbol:
-		p.expectPseudo(tokens.Equal)
+		var typ ast.Element
 		var value ast.Element
+		if p.current == tokens.Colon {
+			typ = p.typeReference()
+		}
+		p.expectPseudo(tokens.Equal)
 		if p.pseudo == tokens.LessThan {
 			value = p.typeLiteral()
 		} else {
 			value = p.expression()
 		}
-		return p.builder.TypeLiteralConstant(name, value)
+		return p.builder.Definition(name, typ, value)
 	default:
 		return p.expects(tokens.Colon)
 	}
