@@ -2,6 +2,7 @@ package binder
 
 import (
 	"dyego0/errors"
+	"dyego0/location"
 	"dyego0/symbols"
 )
 
@@ -23,4 +24,8 @@ func NewContext() *BindingContext {
 		Scope:    symbols.NewBuilder(),
 		Builders: make(map[symbols.Symbol]symbols.ScopeBuilder),
 	}
+}
+
+func (context *BindingContext) Error(loc location.Locatable, message string, args ...interface{}) {
+	context.Errors = append(context.Errors, errors.New(loc, message, args...))
 }

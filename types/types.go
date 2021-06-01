@@ -8,11 +8,34 @@ import (
 	"dyego0/symbols"
 )
 
+// TypeKind is the kind of type
+type TypeKind int
+
+const (
+	// Record is a linear block of memory separated into files
+	Record TypeKind = iota
+
+	// Reference to a record or array
+	Reference
+
+	// Array is a linear block of memory of homomorphic type
+	Array
+
+	// Module is a fixed block of memory similar to a record but in static memory
+	Module
+
+	// Error is the type of invalid expressions
+	Error
+)
+
 // Type represents the operations that can be
 type Type interface {
 	// Symbol is the types unique symbol. Other TypeSymbol's might refer to this type but
 	// this symbol can be used as the canonical symbol.
 	Symbol() TypeSymbol
+
+	// Kind is the kind of the type
+	Kind() TypeKind
 
 	// DisplayName is a name that can be used in error messages. DisplayName is allowed to
 	// calculate a name and take time doing so, which, for example, would happen if the
@@ -20,14 +43,40 @@ type Type interface {
 	// name.
 	DisplayName() string
 
-	// Members is an array of the type's members.
+	// Members is an array of the type's instance members.
 	Members() []Member
+
+	// MemberScope is a lookup scope for instqnce members
+	MemberScope() symbols.Scope
+
+	// TypeScope is the lookup scope for type members
+	TypeScope() symbols.Scope
 
 	// Signatures is an array of callable signature
 	Signatures() []Signature
+
+	// Extensions
+	Extensions() symbols.Scope
+
+	// Container is the type that contains this type if there is one
+	Container() TypeSymbol
+
+	// Elements is the element type of an Array
+	Elements() TypeSymbol
+
+	// Size is the size of the array
+	Size() int
+
+	// Referant is the type a reference refers to
+	Referant() TypeSymbol
+
+	// String returns the display name
+	String() string
 }
 
 // TypeSymbol is a type
+// A type symbol with a nil type can act as an open type variable and be bound using UpdateTypeSymbol
+// If a Type is created from it using NewType, this happens during NewType
 type TypeSymbol interface {
 	symbols.Symbol
 
@@ -40,6 +89,9 @@ type TypeSymbol interface {
 
 	// IsType returns true
 	IsType() bool
+
+	// String is the display name of the type symbol
+	String() string
 }
 
 // Member is a symbol for the member of a type
@@ -47,7 +99,7 @@ type Member interface {
 	symbols.Symbol
 
 	// The type of the member
-	Type() Type
+	Type() TypeSymbol
 
 	// IsMember returns true
 	IsMember() bool
@@ -57,6 +109,9 @@ type Member interface {
 type Field interface {
 	Member
 
+	// Mutable is true if the field can be mutated
+	Mutable() bool
+
 	// IsField returns true
 	IsField() bool
 }
@@ -64,13 +119,13 @@ type Field interface {
 // Signature is a description of the call supported
 type Signature interface {
 	// This is the context the function is executed in
-	This() Type
+	This() TypeSymbol
 
 	// Parameters is the list of parameters for the signature
 	Parameters() []Parameter
 
 	// Result is the type of the function result
-	Result() Type
+	Result() TypeSymbol
 }
 
 // Parameter is a function parameter
@@ -78,7 +133,7 @@ type Parameter interface {
 	symbols.Symbol
 
 	// Type is the type of the parameter
-	Type() Type
+	Type() TypeSymbol
 
 	// IsParameter returns true
 	IsParameter() bool
@@ -92,9 +147,68 @@ type TypeMember interface {
 	IsTypeMember() bool
 }
 
+// TypeExtension is a member that extends other members
+type TypeExtension interface {
+	symbols.Symbol
+
+	// Context are the types required for this member to be in scope
+	Context() []TypeSymbol
+
+	// Target is the type bing extended
+	Target() TypeSymbol
+
+	// Member is the member that extends the target
+	Member() Member
+}
+
+// TypeExtensions is a array of type extensions
+type TypeExtensions interface {
+	symbols.Symbol
+
+	// Extentions is an array of type extensions
+	Extensions() []TypeExtension
+
+	// Add adds an extension to Extensions()
+	Add(extension TypeExtension)
+}
+
 // NewType create a new type
-func NewType(symbol TypeSymbol, members []Member, signatures []Signature) Type {
-	result := &typeImpl{symbol: symbol, members: members, signatures: signatures}
+func NewType(
+	symbol TypeSymbol,
+	kind TypeKind,
+	members []Member,
+	memberScope symbols.Scope,
+	typeScope symbols.Scope,
+	signatures []Signature,
+	extensions symbols.Scope,
+	container TypeSymbol,
+) Type {
+	if members != nil && memberScope == nil {
+		b := symbols.NewBuilder()
+		for _, member := range members {
+			b.Enter(member)
+		}
+		memberScope = b.Build()
+	}
+	if memberScope == nil {
+		memberScope = symbols.EmptyScope()
+	}
+	if typeScope == nil {
+		typeScope = symbols.EmptyScope()
+	}
+	if extensions == nil {
+		extensions = symbols.EmptyScope()
+	}
+	result := &typeImpl{
+		symbol:          symbol,
+		kind:            kind,
+		members:         members,
+		memberScope:     memberScope,
+		typeScope:       typeScope,
+		signatures:      signatures,
+		extensionsScope: extensions,
+		container:       container,
+	}
 	if symbol.Type() == nil {
 		UpdateTypeSymbol(symbol, result)
 	}
@@ -113,42 +227,144 @@ func UpdateTypeSymbol(sym TypeSymbol, typ Type) {
 	ts.typ = typ
 }
 
+// NewArrayType creates a new array type
+func NewArrayType(symbol TypeSymbol, elements TypeSymbol, size int) Type {
+	result := &arrayType{
+		symbol:   symbol,
+		elements: elements,
+		size:     size,
+	}
+	if symbol.Type() == nil {
+		UpdateTypeSymbol(symbol, result)
+	}
+	return result
+}
+
+// MakeArray creates a new array
+func MakeArray(elements TypeSymbol) TypeSymbol {
+	result := NewTypeSymbol(fmt.Sprintf("%s[]", elements.Name()), nil)
+	NewArrayType(result, elements, -1)
+	return result
+}
+
+// NewReferenceType creates a new reference type
+func NewReferenceType(symbol TypeSymbol, referant TypeSymbol) Type {
+	result := &referenceType{
+		symbol:   symbol,
+		referant: referant,
+	}
+	if symbol.Type() == nil {
+		UpdateTypeSymbol(symbol, result)
+	}
+	return result
+}
+
+// MakeReference makes a reference type that references referant
+func MakeReference(referant TypeSymbol) TypeSymbol {
+	r := NewTypeSymbol("*"+referant.Name(), nil)
+	NewReferenceType(r, referant)
+	return r
+}
+
 // NewField creates a new field symbol
-func NewField(name string, typ Type) Field {
-	return &fieldImpl{memberImpl: memberImpl{name: name, typ: typ}}
+func NewField(name string, typ TypeSymbol, mutable bool) Field {
+	return &fieldImpl{memberImpl: memberImpl{name: name, typ: typ}, mutable: mutable}
 }
 
 // NewSignature creates a new signature
-func NewSignature(this Type, parameters []Parameter, result Type) Signature {
+func NewSignature(this TypeSymbol, parameters []Parameter, result TypeSymbol) Signature {
 	return &signatureImpl{this: this, parameters: parameters, result: result}
 }
 
 // NewParameter creates a new parameter symbol
-func NewParameter(name string, typ Type) Parameter {
+func NewParameter(name string, typ TypeSymbol) Parameter {
 	return &parameterImpl{name: name, typ: typ}
 }
 
 // NewTypeMember creates a new type member
-func NewTypeMember(name string, typ Type) TypeMember {
+func NewTypeMember(name string, typ TypeSymbol) TypeMember {
 	return &typeMemberImpl{memberImpl: memberImpl{name: name, typ: typ}}
 }
 
+// NewTypeExtension create a new type extension
+func NewTypeExtension(name string, target TypeSymbol, context []TypeSymbol, member Member) TypeExtension {
+	return &typeExtensionImpl{name: name, target: target, context: context, member: member}
+}
+
+// NewTypeExtensions create a new type extensions list
+func NewTypeExtensions(name string) TypeExtensions {
+	return &typeExtensionsImpl{name: name}
+}
+
+// NewErrorType creates an error type symbol
+func NewErrorType() TypeSymbol {
+	result := NewTypeSymbol("<error>", nil)
+	NewType(result, Error, nil, nil, nil, nil, nil, nil)
+	return result
+}
+
+// IsError returns true if typeSym is an error type
+func IsError(typeSym TypeSymbol) bool {
+	t := typeSym.Type()
+	return t != nil && t.Kind() == Error
+}
+
 type typeImpl struct {
-	symbol     TypeSymbol
-	members    []Member
-	signatures []Signature
+	symbol          TypeSymbol
+	kind            TypeKind
+	members         []Member
+	memberScope     symbols.Scope
+	typeScope       symbols.Scope
+	extensionsScope symbols.Scope
+	signatures      []Signature
+	container       TypeSymbol
 }
 
 func (t *typeImpl) Symbol() TypeSymbol {
 	return t.symbol
 }
 
+func (t *typeImpl) Kind() TypeKind {
+	return t.kind
+}
+
 func (t *typeImpl) Members() []Member {
 	return t.members
 }
 
+func (t *typeImpl) MemberScope() symbols.Scope {
+	return t.memberScope
+}
+
+func (t *typeImpl) TypeScope() symbols.Scope {
+	return t.typeScope
+}
+
 func (t *typeImpl) Signatures() []Signature {
 	return t.signatures
+}
+
+func (t *typeImpl) Extensions() symbols.Scope {
+	return t.extensionsScope
+}
+
+func (t *typeImpl) Container() TypeSymbol {
+	return t.container
+}
+
+func (t *typeImpl) containerName() string {
+	if t.container == nil {
+		return ""
+	}
+	ct := t.container.Type()
+	if ct != nil {
+		return ct.DisplayName() + "."
+	}
+	n := t.container.Name()
+	if n != "" {
+		return n + "."
+	}
+	return ""
 }
 
 func (t *typeImpl) DisplayName() string {
@@ -156,7 +372,7 @@ func (t *typeImpl) DisplayName() string {
 	if symbol != nil {
 		name := symbol.Name()
 		if name != "" {
-			return name
+			return t.containerName() + name
 		}
 	}
 	builder := &stringBuilder{}
@@ -175,6 +391,18 @@ func (t *typeImpl) DisplayName() string {
 		}
 	})
 	return builder.String()
+}
+
+func (t *typeImpl) Elements() TypeSymbol {
+	return nil
+}
+
+func (t *typeImpl) Size() int {
+	return 0
+}
+
+func (t *typeImpl) Referant() TypeSymbol {
+	return nil
 }
 
 func (t *typeImpl) String() string {
@@ -202,16 +430,142 @@ func (s *typeSymbolImpl) Canonical() TypeSymbol {
 	return s.Type().Symbol()
 }
 
+func (s *typeSymbolImpl) String() string {
+	if s.typ != nil {
+		return s.typ.DisplayName()
+	}
+	return s.name
+}
+
+type arrayType struct {
+	symbol   TypeSymbol
+	elements TypeSymbol
+	size     int
+}
+
+func (a *arrayType) Symbol() TypeSymbol {
+	return a.symbol
+}
+
+func (a *arrayType) Kind() TypeKind {
+	return Array
+}
+
+func (a *arrayType) DisplayName() string {
+	elementName := a.elements.String()
+	if a.size < 0 {
+		return elementName + "[]"
+	}
+	return fmt.Sprintf("%s[%d]", elementName, a.size)
+}
+
+func (a *arrayType) Members() []Member {
+	return nil
+}
+
+func (a *arrayType) MemberScope() symbols.Scope {
+	return symbols.EmptyScope()
+}
+
+func (a *arrayType) TypeScope() symbols.Scope {
+	return symbols.EmptyScope()
+}
+
+func (a *arrayType) Signatures() []Signature {
+	return nil
+}
+
+func (a *arrayType) Extensions() symbols.Scope {
+	return symbols.EmptyScope()
+}
+
+func (a *arrayType) Container() TypeSymbol {
+	return nil
+}
+
+func (a *arrayType) Elements() TypeSymbol {
+	return a.elements
+}
+
+func (a *arrayType) Size() int {
+	return a.size
+}
+
+func (a *arrayType) Referant() TypeSymbol {
+	return nil
+}
+
+func (a *arrayType) String() string {
+	return a.DisplayName()
+}
+
+type referenceType struct {
+	symbol   TypeSymbol
+	referant TypeSymbol
+}
+
+func (r *referenceType) Symbol() TypeSymbol {
+	return r.symbol
+}
+
+func (r *referenceType) Kind() TypeKind {
+	return Reference
+}
+
+func (r *referenceType) DisplayName() string {
+	return "*" + r.referant.String()
+}
+
+func (r *referenceType) Members() []Member {
+	return nil
+}
+
+func (r *referenceType) MemberScope() symbols.Scope {
+	return symbols.EmptyScope()
+}
+
+func (r *referenceType) TypeScope() symbols.Scope {
+	return symbols.EmptyScope()
+}
+
+func (r *referenceType) Signatures() []Signature {
+	return nil
+}
+
+func (r *referenceType) Extensions() symbols.Scope {
+	return symbols.EmptyScope()
+}
+
+func (r *referenceType) Container() TypeSymbol {
+	return nil
+}
+
+func (r *referenceType) Elements() TypeSymbol {
+	return nil
+}
+
+func (r *referenceType) Size() int {
+	return 0
+}
+
+func (r *referenceType) Referant() TypeSymbol {
+	return r.referant
+}
+
+func (r *referenceType) String() string {
+	return r.DisplayName()
+}
+
 type memberImpl struct {
 	name string
-	typ  Type
+	typ  TypeSymbol
 }
 
 func (m memberImpl) Name() string {
 	return m.name
 }
 
-func (m memberImpl) Type() Type {
+func (m memberImpl) Type() TypeSymbol {
 	return m.typ
 }
 
@@ -221,6 +575,11 @@ func (m memberImpl) IsMember() bool {
 
 type fieldImpl struct {
 	memberImpl
+	mutable bool
+}
+
+func (f *fieldImpl) Mutable() bool {
+	return f.mutable
 }
 
 func (f *fieldImpl) IsField() bool {
@@ -228,12 +587,12 @@ func (f *fieldImpl) IsField() bool {
 }
 
 type signatureImpl struct {
-	this       Type
+	this       TypeSymbol
 	parameters []Parameter
-	result     Type
+	result     TypeSymbol
 }
 
-func (s *signatureImpl) This() Type {
+func (s *signatureImpl) This() TypeSymbol {
 	return s.this
 }
 
@@ -241,7 +600,7 @@ func (s *signatureImpl) Parameters() []Parameter {
 	return s.parameters
 }
 
-func (s *signatureImpl) Result() Type {
+func (s *signatureImpl) Result() TypeSymbol {
 	return s.result
 }
 
@@ -267,14 +626,14 @@ func (s *signatureImpl) String() string {
 
 type parameterImpl struct {
 	name string
-	typ  Type
+	typ  TypeSymbol
 }
 
 func (p *parameterImpl) Name() string {
 	return p.name
 }
 
-func (p *parameterImpl) Type() Type {
+func (p *parameterImpl) Type() TypeSymbol {
 	return p.typ
 }
 
@@ -288,6 +647,46 @@ type typeMemberImpl struct {
 
 func (t *typeMemberImpl) IsTypeMember() bool {
 	return true
+}
+
+type typeExtensionImpl struct {
+	name    string
+	target  TypeSymbol
+	context []TypeSymbol
+	member  Member
+}
+
+func (t *typeExtensionImpl) Name() string {
+	return t.name
+}
+
+func (t *typeExtensionImpl) Target() TypeSymbol {
+	return t.target
+}
+
+func (t *typeExtensionImpl) Context() []TypeSymbol {
+	return t.context
+}
+
+func (t *typeExtensionImpl) Member() Member {
+	return t.member
+}
+
+type typeExtensionsImpl struct {
+	name       string
+	extensions []TypeExtension
+}
+
+func (t *typeExtensionsImpl) Name() string {
+	return t.name
+}
+
+func (t *typeExtensionsImpl) Extensions() []TypeExtension {
+	return t.extensions
+}
+
+func (t *typeExtensionsImpl) Add(extension TypeExtension) {
+	t.extensions = append(t.extensions, extension)
 }
 
 type stringBuilder struct {

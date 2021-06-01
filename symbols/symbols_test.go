@@ -55,6 +55,10 @@ func expect(scope symbols.Scope, names ...string) {
 }
 
 var _ = Describe("symbols", func() {
+	It("can create an empty scope", func() {
+		e := symbols.EmptyScope()
+		Expect(e.IsEmpty()).To(BeTrue())
+	})
 	It("can create a builder", func() {
 		symbols.NewBuilder()
 	})
@@ -62,6 +66,7 @@ var _ = Describe("symbols", func() {
 		b := symbols.NewBuilder()
 		_, ok := b.Enter(sym("a"))
 		Expect(ok).To(BeTrue())
+		Expect(b.IsEmpty()).To(BeFalse())
 	})
 	It("can build a scope", func() {
 		scope("a", "b", "c")
@@ -83,7 +88,9 @@ var _ = Describe("symbols", func() {
 		s2 := scope("b")
 		m := symbols.Merge(s1, s2)
 		b := symbols.NewBuilderFrom(m)
+		Expect(b.IsEmpty()).To(BeFalse())
 		Expect(b.Contains("a")).To(BeTrue())
+		Expect(b.IsEmpty()).To(BeFalse())
 	})
 	It("can detect a duplicate symbol", func() {
 		b := symbols.NewBuilder()
@@ -110,6 +117,7 @@ var _ = Describe("symbols", func() {
 		s2 := scope("d", "e", "f")
 		sm := symbols.Merge(s1, s2)
 		expect(sm, "a", "b", "c", "d", "e", "f")
+		Expect(sm.IsEmpty()).To(BeFalse())
 	})
 	It("can merge to an empty scope", func() {
 		s := symbols.Merge()
