@@ -15,6 +15,9 @@ type Scope interface {
 
 	// ForEach enumerates the symbols in scope
 	ForEach(block func(Symbol) bool)
+
+	// Return true if the scope is empty
+	IsEmpty() bool
 }
 
 // ScopeBuilder is used to build a scope.
@@ -31,6 +34,11 @@ type ScopeBuilder interface {
 
 	// Build will return a the scope built with this builder.
 	Build() Scope
+}
+
+// EmptyScope returns an empty scope
+func EmptyScope() Scope {
+	return emptyScope{}
 }
 
 type scope struct {
@@ -53,6 +61,10 @@ func (s *scope) ForEach(block func(Symbol) bool) {
 			break
 		}
 	}
+}
+
+func (s *scope) IsEmpty() bool {
+	return len(s.table) == 0
 }
 
 func newScope(table map[string]Symbol) Scope {
@@ -107,6 +119,13 @@ func (s *scopeBuilder) ForEach(block func(Symbol) bool) {
 		}
 	}
 	s.base.ForEach(block)
+}
+
+func (s *scopeBuilder) IsEmpty() bool {
+	if len(s.table) != 0 {
+		return false
+	}
+	return s.base.IsEmpty()
 }
 
 func (s *scopeBuilder) Build() Scope {
@@ -174,6 +193,15 @@ func (s *multiScope) ForEach(block func(Symbol) bool) {
 	}
 }
 
+func (s *multiScope) IsEmpty() bool {
+	for _, table := range s.scopes {
+		if !table.IsEmpty() {
+			return false
+		}
+	}
+	return true
+}
+
 func newMultiScope(scopes ...Scope) Scope {
 	var result []Scope
 	for _, scope := range scopes {
@@ -201,6 +229,10 @@ func (s emptyScope) Contains(name string) bool {
 }
 
 func (s emptyScope) ForEach(block func(Symbol) bool) {
+}
+
+func (s emptyScope) IsEmpty() bool {
+	return true
 }
 
 // Merge merges scopes where the earlier scope takes precedence over later scopes

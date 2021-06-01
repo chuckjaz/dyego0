@@ -959,6 +959,8 @@ func (p *parser) simpleTypeReference() ast.Element {
 }
 
 func (p *parser) typeReferencePrimitive() ast.Element {
+	p.builder.PushContext()
+	defer p.builder.PopContext()
 	switch p.current {
 	case tokens.LParen:
 		p.next()
@@ -966,8 +968,12 @@ func (p *parser) typeReferencePrimitive() ast.Element {
 		p.expect(tokens.RParen)
 		return result
 	case tokens.Symbol:
-		if p.pseudo == tokens.LessThan {
+		switch p.pseudo {
+		case tokens.LessThan:
 			return p.typeLiteral()
+		case tokens.Mult:
+			p.next()
+			return p.builder.ReferenceType(p.typeReference())
 		}
 		fallthrough
 	default:
