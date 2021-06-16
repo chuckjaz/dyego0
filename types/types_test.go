@@ -37,8 +37,9 @@ var _ = Describe("types", func() {
 		Expect(f.IsMember()).To(BeTrue())
 	})
 	It("should be able to create a signature", func() {
-		s := types.NewSignature(nil, nil, nil)
+		s := types.NewSignature(nil, nil, nil, nil)
 		Expect(s.This()).To(BeNil())
+		Expect(s.Context()).To(BeNil())
 		Expect(s.Parameters()).To(BeNil())
 		Expect(s.Result()).To(BeNil())
 	})
@@ -63,7 +64,7 @@ var _ = Describe("types", func() {
 			[]types.Member{types.NewField("a", a, false)},
 			nil,
 			nil,
-			[]types.Signature{types.NewSignature(a, []types.Parameter{types.NewParameter("a", a)}, a)},
+			[]types.Signature{types.NewSignature(a, nil, []types.Parameter{types.NewParameter("a", a)}, a)},
 			nil,
 			nil,
 		)

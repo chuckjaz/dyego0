@@ -7,6 +7,7 @@ import (
 	"dyego0/parser"
 	"dyego0/scanner"
 	"dyego0/tokens"
+	"io/ioutil"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -95,4 +96,14 @@ func parseNamed(text, filename string) ast.Element {
 
 func parse(text string) ast.Element {
 	return parseNamed(text, "test")
+}
+
+func readFile(name string) []byte {
+	src, err := ioutil.ReadFile(name)
+	Expect(err).To(BeNil())
+	return append(src, 0)
+}
+
+func parseFile(name string) ast.Element {
+	return parseNamed(string(readFile(name)), name)
 }

@@ -81,8 +81,23 @@ func (v *buildVisitor) findTypeIn(element ast.Element, scope symbols.Scope) type
 	case ast.ReferenceType:
 		referant := v.findTypeIn(n.Referent(), scope)
 		return types.MakeReference(referant)
+	case ast.TypeLiteral:
+		typSym := types.NewTypeSymbol("", nil)
+		typeScope := symbols.NewBuilder()
+		v.builders[typSym] = typeScope
+		nestedEnter := newEnterVisitor(typeScope, v.builders)
+		for _, member := range n.Members() {
+			nestedEnter.Visit(member)
+		}
+		nestedScope := symbols.Merge(v.scope, typeScope)
+		nested := newBuilderVisitor(typSym, nestedScope, v.context, v.builders, typeScope)
+		for _, member := range n.Members() {
+			nested.Visit(member)
+		}
+		nested.Done(typSym, types.Record, nil)
+		return typSym
 	}
-	assert.Fail("Unhandled element type %#v", element)
+	assert.Fail("Unhandled element type %s", element)
 	return nil
 }
 
@@ -147,6 +162,12 @@ func (v *buildVisitor) targetAndContextOf(element ast.Element) (types.TypeSymbol
 }
 
 func (v *buildVisitor) Visit(element ast.Element) bool {
+	typeOrOpen := func(typeElement ast.Element) types.TypeSymbol {
+		if typeElement == nil {
+			return v.openTypeFor(element)
+		}
+		return v.findType(typeElement)
+	}
 	for {
 		switch n := element.(type) {
 		case ast.Sequence:
@@ -154,14 +175,22 @@ func (v *buildVisitor) Visit(element ast.Element) bool {
 			element = n.Right() // Simulated tail call
 			continue
 		case ast.Storage:
-			var ft types.TypeSymbol
-			if n.Type() == nil {
-				ft = types.NewTypeSymbol("", nil)
-			} else {
-				ft = v.findType(n.Type())
-			}
+			ft := typeOrOpen(n.Type())
 			f := types.NewField(n.Name().Text(), ft, n.Mutable())
 			v.enterMember(element, f)
+		case ast.CallableTypeMember:
+			var parameters []types.Parameter
+			for _, parameter := range n.Parameters() {
+				switch p := parameter.(type) {
+				case ast.Parameter:
+					name := p.Name().Text()
+					typeSym := typeOrOpen(p.Type())
+					parameters = append(parameters, types.NewParameter(name, typeSym))
+				}
+			}
+			resultType := typeOrOpen(n.Result())
+			signature := types.NewSignature(nil, nil, parameters, resultType)
+			v.signatures = append(v.signatures, signature)
 		case ast.Definition:
 			if isTypeDeclaration(n) {
 				name, ok := n.Name().(ast.Name)
@@ -179,12 +208,7 @@ func (v *buildVisitor) Visit(element ast.Element) bool {
 			} else {
 				switch m := n.Name().(type) {
 				case ast.Name:
-					var typeSym types.TypeSymbol
-					if n.Type() != nil {
-						typeSym = v.findType(n.Type())
-					} else {
-						typeSym = v.openTypeFor(n.Value())
-					}
+					typeSym := typeOrOpen(n.Type())
 					v.enterTypeMember(n, types.NewTypeMember(m.Text(), typeSym))
 				case ast.Selection:
 					target, context := v.targetAndContextOf(m.Target())
@@ -199,12 +223,7 @@ func (v *buildVisitor) Visit(element ast.Element) bool {
 						extensions, ok = e.(types.TypeExtensions)
 						assert.Assert(ok, "Expected TypeExtensions")
 					}
-					var typeSym types.TypeSymbol
-					if n.Type() != nil {
-						typeSym = v.findType(n.Type())
-					} else {
-						typeSym = v.openTypeFor(n.Value())
-					}
+					typeSym := typeOrOpen(n.Type())
 					member := types.NewTypeMember(name, typeSym)
 					sym := types.NewTypeExtension(m.Member().Text(), target, context, member)
 					extensions.Add(sym)
@@ -212,6 +231,8 @@ func (v *buildVisitor) Visit(element ast.Element) bool {
 					assert.Fail("Unexpected name %s", n.Name())
 				}
 			}
+		default:
+			assert.Fail("Unexpected node in build %s", element)
 		}
 		break
 	}

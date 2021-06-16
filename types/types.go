@@ -121,6 +121,9 @@ type Signature interface {
 	// This is the context the function is executed in
 	This() TypeSymbol
 
+	// Context is the context in which the call is valid
+	Context() []TypeSymbol
+
 	// Parameters is the list of parameters for the signature
 	Parameters() []Parameter
 
@@ -272,8 +275,8 @@ func NewField(name string, typ TypeSymbol, mutable bool) Field {
 }
 
 // NewSignature creates a new signature
-func NewSignature(this TypeSymbol, parameters []Parameter, result TypeSymbol) Signature {
-	return &signatureImpl{this: this, parameters: parameters, result: result}
+func NewSignature(this TypeSymbol, context []TypeSymbol, parameters []Parameter, result TypeSymbol) Signature {
+	return &signatureImpl{this: this, context: context, parameters: parameters, result: result}
 }
 
 // NewParameter creates a new parameter symbol
@@ -588,12 +591,17 @@ func (f *fieldImpl) IsField() bool {
 
 type signatureImpl struct {
 	this       TypeSymbol
+	context    []TypeSymbol
 	parameters []Parameter
 	result     TypeSymbol
 }
 
 func (s *signatureImpl) This() TypeSymbol {
 	return s.this
+}
+
+func (s *signatureImpl) Context() []TypeSymbol {
+	return s.context
 }
 
 func (s *signatureImpl) Parameters() []Parameter {

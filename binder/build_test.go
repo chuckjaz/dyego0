@@ -92,4 +92,9 @@ var _ = Describe("Build", func() {
 		ma := findMember(modules, "a")
 		Expect(ma).To(Not(BeNil()))
 	})
+	It("can parse a callable type", func() {
+		modules := m("var a: < { value: Int -> Int } >")
+		ma := findMember(modules, "a")
+		Expect(ma).To(Not(BeNil()))
+	})
 })
