@@ -55,9 +55,6 @@ type Type interface {
 	// Signatures is an array of callable signature
 	Signatures() []Signature
 
-	// Extensions
-	Extensions() symbols.Scope
-
 	// Container is the type that contains this type if there is one
 	Container() TypeSymbol
 
@@ -147,31 +144,6 @@ type TypeMember interface {
 	IsTypeMember() bool
 }
 
-// TypeExtension is a member that extends other members
-type TypeExtension interface {
-	symbols.Symbol
-
-	// Context are the types required for this member to be in scope
-	Context() []TypeSymbol
-
-	// Target is the type bing extended
-	Target() TypeSymbol
-
-	// Member is the member that extends the target
-	Member() Member
-}
-
-// TypeExtensions is a array of type extensions
-type TypeExtensions interface {
-	symbols.Symbol
-
-	// Extentions is an array of type extensions
-	Extensions() []TypeExtension
-
-	// Add adds an extension to Extensions()
-	Add(extension TypeExtension)
-}
-
 // NewType create a new type
 func NewType(
 	symbol TypeSymbol,
@@ -180,7 +152,6 @@ func NewType(
 	memberScope symbols.Scope,
 	typeScope symbols.Scope,
 	signatures []Signature,
-	extensions symbols.Scope,
 	container TypeSymbol,
 ) Type {
 	if members != nil && memberScope == nil {
@@ -196,18 +167,14 @@ func NewType(
 	if typeScope == nil {
 		typeScope = symbols.EmptyScope()
 	}
-	if extensions == nil {
-		extensions = symbols.EmptyScope()
-	}
 	result := &typeImpl{
-		symbol:          symbol,
-		kind:            kind,
-		members:         members,
-		memberScope:     memberScope,
-		typeScope:       typeScope,
-		signatures:      signatures,
-		extensionsScope: extensions,
-		container:       container,
+		symbol:      symbol,
+		kind:        kind,
+		members:     members,
+		memberScope: memberScope,
+		typeScope:   typeScope,
+		signatures:  signatures,
+		container:   container,
 	}
 	if symbol.Type() == nil {
 		UpdateTypeSymbol(symbol, result)
@@ -286,20 +253,10 @@ func NewTypeMember(name string, typ TypeSymbol) TypeMember {
 	return &typeMemberImpl{memberImpl: memberImpl{name: name, typ: typ}}
 }
 
-// NewTypeExtension create a new type extension
-func NewTypeExtension(name string, target TypeSymbol, context []TypeSymbol, member Member) TypeExtension {
-	return &typeExtensionImpl{name: name, target: target, context: context, member: member}
-}
-
-// NewTypeExtensions create a new type extensions list
-func NewTypeExtensions(name string) TypeExtensions {
-	return &typeExtensionsImpl{name: name}
-}
-
 // NewErrorType creates an error type symbol
 func NewErrorType() TypeSymbol {
 	result := NewTypeSymbol("<error>", nil)
-	NewType(result, Error, nil, nil, nil, nil, nil, nil)
+	NewType(result, Error, nil, nil, nil, nil, nil)
 	return result
 }
 
@@ -310,14 +267,13 @@ func IsError(typeSym TypeSymbol) bool {
 }
 
 type typeImpl struct {
-	symbol          TypeSymbol
-	kind            TypeKind
-	members         []Member
-	memberScope     symbols.Scope
-	typeScope       symbols.Scope
-	extensionsScope symbols.Scope
-	signatures      []Signature
-	container       TypeSymbol
+	symbol      TypeSymbol
+	kind        TypeKind
+	members     []Member
+	memberScope symbols.Scope
+	typeScope   symbols.Scope
+	signatures  []Signature
+	container   TypeSymbol
 }
 
 func (t *typeImpl) Symbol() TypeSymbol {
@@ -342,10 +298,6 @@ func (t *typeImpl) TypeScope() symbols.Scope {
 
 func (t *typeImpl) Signatures() []Signature {
 	return t.signatures
-}
-
-func (t *typeImpl) Extensions() symbols.Scope {
-	return t.extensionsScope
 }
 
 func (t *typeImpl) Container() TypeSymbol {
@@ -647,46 +599,6 @@ type typeMemberImpl struct {
 
 func (t *typeMemberImpl) IsTypeMember() bool {
 	return true
-}
-
-type typeExtensionImpl struct {
-	name    string
-	target  TypeSymbol
-	context []TypeSymbol
-	member  Member
-}
-
-func (t *typeExtensionImpl) Name() string {
-	return t.name
-}
-
-func (t *typeExtensionImpl) Target() TypeSymbol {
-	return t.target
-}
-
-func (t *typeExtensionImpl) Context() []TypeSymbol {
-	return t.context
-}
-
-func (t *typeExtensionImpl) Member() Member {
-	return t.member
-}
-
-type typeExtensionsImpl struct {
-	name       string
-	extensions []TypeExtension
-}
-
-func (t *typeExtensionsImpl) Name() string {
-	return t.name
-}
-
-func (t *typeExtensionsImpl) Extensions() []TypeExtension {
-	return t.extensions
-}
-
-func (t *typeExtensionsImpl) Add(extension TypeExtension) {
-	t.extensions = append(t.extensions, extension)
 }
 
 type stringBuilder struct {

@@ -1000,7 +1000,7 @@ func (p *parser) typeLiteral() ast.TypeLiteral {
 				continue
 			}
 			fallthrough
-		case tokens.Identifier:
+		case tokens.Identifier, tokens.Let:
 			members = append(members, p.typeLiteralMember())
 		}
 		if p.separator() {
@@ -1025,34 +1025,45 @@ func (p *parser) typeLiteralMember() ast.Element {
 	p.builder.PushContext()
 	defer p.builder.PopContext()
 	var name ast.Name
+	var mutable bool = false
 	switch p.current {
-	case tokens.Identifier, tokens.Symbol:
-		name = p.builder.Name(p.scanner.Value().(string))
+	case tokens.Let:
 		p.next()
-	default:
-		name = p.expectIdent()
-	}
-	switch p.current {
-	case tokens.Colon:
-		p.next()
-		typ := p.typeReference()
-		return p.builder.Storage(name, typ, nil, false)
-	case tokens.Symbol:
+		name := p.expectIdent()
 		var typ ast.Element
-		var value ast.Element
 		if p.current == tokens.Colon {
+			p.next()
 			typ = p.typeReference()
 		}
 		p.expectPseudo(tokens.Equal)
+		var value ast.Element
 		if p.pseudo == tokens.LessThan {
 			value = p.typeLiteral()
 		} else {
 			value = p.expression()
 		}
 		return p.builder.Definition(name, typ, value)
+	case tokens.Var:
+		p.next()
+		mutable = true
+		fallthrough
 	default:
-		return p.expects(tokens.Colon)
+		name = p.expectIdent()
 	}
+	var typ ast.Element
+	if p.current == tokens.Colon {
+		p.next()
+		typ = p.typeReference()
+	}
+	var value ast.Element
+	if p.pseudo == tokens.Equal {
+		p.next()
+		value = p.expression()
+	}
+	if typ == nil && value == nil {
+		p.expectPseudo(tokens.Equal)
+	}
+	return p.builder.Storage(name, typ, value, mutable)
 }
 
 func (p *parser) callableTypeMember() ast.CallableTypeMember {
@@ -1072,7 +1083,7 @@ func (p *parser) definition() ast.Element {
 	switch p.current {
 	case tokens.Let:
 		p.next()
-		name := p.definitionName()
+		name := p.expectIdent()
 		var typ ast.Element
 		if p.current == tokens.Colon {
 			p.next()
@@ -1084,18 +1095,6 @@ func (p *parser) definition() ast.Element {
 	default:
 		return p.expects(tokens.Let, tokens.Var)
 	}
-}
-
-func (p *parser) definitionName() ast.Element {
-	p.builder.PushContext()
-	defer p.builder.PopContext()
-	var result ast.Element = p.expectIdent()
-	for p.current == tokens.Dot {
-		p.next()
-		name := p.expectIdent()
-		result = p.builder.Selection(result, name)
-	}
-	return result
 }
 
 func (p *parser) letValue() ast.Element {
