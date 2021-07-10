@@ -180,7 +180,7 @@ type WhenElseClause interface {
 // Definition is a constant or type declaration
 type Definition interface {
 	Element
-	Name() Element
+	Name() Name
 	Type() Element
 	Value() Element
 	IsDefinition() bool
@@ -362,7 +362,7 @@ type Builder interface {
 	WhenValueClause(value Element, body Element) WhenValueClause
 	WhenElseClause(body Element) WhenElseClause
 	Parameter(name Name, typ Element, deflt Element) Parameter
-	Definition(name Element, typ Element, value Element) Definition
+	Definition(name Name, typ Element, value Element) Definition
 	Storage(name Name, typ Element, value Element, mutable bool) Storage
 	TypeLiteral(members []Element) TypeLiteral
 	CallableTypeMember(parameters []Element, result Element) CallableTypeMember
@@ -1045,12 +1045,12 @@ func (b *builderImpl) Storage(name Name, typ Element, value Element, mutable boo
 
 type definitionImpl struct {
 	location.Location
-	name  Element
+	name  Name
 	typ   Element
 	value Element
 }
 
-func (l *definitionImpl) Name() Element {
+func (l *definitionImpl) Name() Name {
 	return l.name
 }
 
@@ -1070,7 +1070,7 @@ func (l *definitionImpl) String() string {
 	return fmt.Sprintf("Definition(%s, name: %s, type: %s, value: %s)", l.Location, s(l.name), s(l.typ), s(l.value))
 }
 
-func (b *builderImpl) Definition(name, typ, value Element) Definition {
+func (b *builderImpl) Definition(name Name, typ, value Element) Definition {
 	return &definitionImpl{Location: b.Loc(), name: name, typ: typ, value: value}
 }
 

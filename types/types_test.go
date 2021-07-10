@@ -12,7 +12,7 @@ import (
 var _ = Describe("types", func() {
 	It("should be able to create a type", func() {
 		s := types.NewTypeSymbol("A", nil)
-		t := types.NewType(s, types.Record, nil, nil, nil, nil, nil, nil)
+		t := types.NewType(s, types.Record, nil, nil, nil, nil, nil)
 		Expect(t.Symbol()).To(Equal(s))
 		Expect(s.Type()).To(Equal(t))
 		Expect(t.DisplayName()).To(Equal("A"))
@@ -56,7 +56,7 @@ var _ = Describe("types", func() {
 	})
 	It("can produce a display name for anonymous types", func() {
 		a := types.NewTypeSymbol("A", nil)
-		types.NewType(a, types.Record, nil, nil, nil, nil, nil, nil)
+		types.NewType(a, types.Record, nil, nil, nil, nil, nil)
 		t := types.NewType(
 			types.NewTypeSymbol("", nil),
 			types.Record,
@@ -65,30 +65,29 @@ var _ = Describe("types", func() {
 			nil,
 			[]types.Signature{types.NewSignature(a, []types.Parameter{types.NewParameter("a", a)}, a)},
 			nil,
-			nil,
 		)
 		Expect(t.DisplayName()).To(Equal("<a: A, {A.a: A -> A}>"))
 	})
 	It("can produce a display name for a contained type", func() {
 		c := types.NewTypeSymbol("C", nil)
-		types.NewType(c, types.Record, nil, nil, nil, nil, nil, nil)
+		types.NewType(c, types.Record, nil, nil, nil, nil, nil)
 		n := types.NewTypeSymbol("N", nil)
-		t := types.NewType(n, types.Record, nil, nil, nil, nil, nil, c)
+		t := types.NewType(n, types.Record, nil, nil, nil, nil, c)
 		Expect(t.DisplayName()).To(Equal("C.N"))
 	})
 	It("can produce dislay names for incomplete types", func() {
 		e := types.NewTypeSymbol("", nil)
 		c := types.NewTypeSymbol("C", nil)
 		ne := types.NewTypeSymbol("NE", nil)
-		net := types.NewType(ne, types.Record, nil, nil, nil, nil, nil, e)
+		net := types.NewType(ne, types.Record, nil, nil, nil, nil, e)
 		Expect(net.DisplayName()).To(Equal("NE"))
 		nc := types.NewTypeSymbol("NC", nil)
-		nct := types.NewType(nc, types.Record, nil, nil, nil, nil, nil, c)
+		nct := types.NewType(nc, types.Record, nil, nil, nil, nil, c)
 		Expect(nct.DisplayName()).To(Equal("C.NC"))
 	})
 	t := func(name string) types.TypeSymbol {
 		typeSym := types.NewTypeSymbol(name, nil)
-		types.NewType(typeSym, types.Record, nil, nil, nil, nil, nil, nil)
+		types.NewType(typeSym, types.Record, nil, nil, nil, nil, nil)
 		return typeSym
 	}
 	It("can make an error types", func() {

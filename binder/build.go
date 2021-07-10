@@ -13,7 +13,6 @@ type buildVisitor struct {
 	members             []types.Member
 	membersScopeBuilder symbols.ScopeBuilder
 	typeScopeBuilder    symbols.ScopeBuilder
-	extensionBuilder    symbols.ScopeBuilder
 	signatures          []types.Signature
 	builders            map[symbols.Symbol]symbols.ScopeBuilder
 	openTypeSymbols     map[types.TypeSymbol]ast.Element
@@ -34,7 +33,6 @@ func newBuilderVisitor(
 		context:             context,
 		builders:            builders,
 		membersScopeBuilder: symbols.NewBuilder(),
-		extensionBuilder:    symbols.NewBuilder(),
 		openTypeSymbols:     make(map[types.TypeSymbol]ast.Element),
 		openElements:        make(map[ast.Element]types.TypeSymbol),
 		typeScopeBuilder:    typeScopeBuilder,
@@ -177,40 +175,13 @@ func (v *buildVisitor) Visit(element ast.Element) bool {
 				ast.WalkChildren(n.Value(), nested)
 				nested.Done(typeSym, types.Record, v.container)
 			} else {
-				switch m := n.Name().(type) {
-				case ast.Name:
-					var typeSym types.TypeSymbol
-					if n.Type() != nil {
-						typeSym = v.findType(n.Type())
-					} else {
-						typeSym = v.openTypeFor(n.Value())
-					}
-					v.enterTypeMember(n, types.NewTypeMember(m.Text(), typeSym))
-				case ast.Selection:
-					target, context := v.targetAndContextOf(m.Target())
-					name := m.Member().Text()
-					var extensions types.TypeExtensions
-					if !v.extensionBuilder.Contains(name) {
-						extensions = types.NewTypeExtensions(name)
-						v.extensionBuilder.Enter(extensions)
-					} else {
-						e, ok := v.extensionBuilder.Find(name)
-						assert.Assert(ok, "Builder contains/find inconsistency")
-						extensions, ok = e.(types.TypeExtensions)
-						assert.Assert(ok, "Expected TypeExtensions")
-					}
-					var typeSym types.TypeSymbol
-					if n.Type() != nil {
-						typeSym = v.findType(n.Type())
-					} else {
-						typeSym = v.openTypeFor(n.Value())
-					}
-					member := types.NewTypeMember(name, typeSym)
-					sym := types.NewTypeExtension(m.Member().Text(), target, context, member)
-					extensions.Add(sym)
-				default:
-					assert.Fail("Unexpected name %s", n.Name())
+				var typeSym types.TypeSymbol
+				if n.Type() != nil {
+					typeSym = v.findType(n.Type())
+				} else {
+					typeSym = v.openTypeFor(n.Value())
 				}
+				v.enterTypeMember(n, types.NewTypeMember(n.Name().Text(), typeSym))
 			}
 		}
 		break
@@ -227,7 +198,6 @@ func (v *buildVisitor) Done(typeSym types.TypeSymbol, kind types.TypeKind, conta
 		v.membersScopeBuilder.Build(),
 		v.typeScopeBuilder.Build(),
 		v.signatures,
-		v.extensionBuilder.Build(),
 		container,
 	)
 }

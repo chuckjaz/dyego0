@@ -1,240 +1,240 @@
 let valtype = <
-  i32 = 0x7Fub
-  i64 = 0x7Eub
-  f32 = 0x7Dub
-  f64 = 0x7Cub
+  let i32 = 0x7Fub
+  let i64 = 0x7Eub
+  let f32 = 0x7Dub
+  let f64 = 0x7Cub
 >
 
 let limits = <
-  min = 0x00ub
-  min_max = 0x81ub
+  let min = 0x00ub
+  let min_max = 0x81ub
 >
 
 let inst = <
-  unreachable = 0x00ub
-  nop = 0x01ub
-  block = 0x02ub
-  loop = 0x03ub
-  if = 0x04ub
-  else = 0x05ub
-  br = 0x0Cub
-  br_if = 0x0Dub
-  br_table = 0x0Eub
-  ret = 0x0Fub
-  call = 0x10ub
-  call_indirect = 0x11ub
+  let unreachable = 0x00ub
+  let nop = 0x01ub
+  let block = 0x02ub
+  let loop = 0x03ub
+  let if = 0x04ub
+  let else = 0x05ub
+  let br = 0x0Cub
+  let br_if = 0x0Dub
+  let br_table = 0x0Eub
+  let ret = 0x0Fub
+  let call = 0x10ub
+  let call_indirect = 0x11ub
 
-  drop = 0x1Aub
-  select = 0x1Bub
+  let drop = 0x1Aub
+  let select = 0x1Bub
 
-  local = <
-    get = 0x20ub
-    set = 0x21ub
-    tee = 0x22ub
+  let local = <
+    let get = 0x20ub
+    let set = 0x21ub
+    let tee = 0x22ub
   >
 
-  global = <
-    get = 0x23ub
-    set = 0x24ub
+  let global = <
+    let get = 0x23ub
+    let set = 0x24ub
   >
 
-  i32 = <
-    const = 0x41ub
+  let i32 = <
+    let const = 0x41ub
 
-    load = 0x28ub
+    let load = 0x28ub
 
-    load8_s = 0x2Cub
-    load8_u = 0x2Dub
-    load16_s = 0x2Eub
-    load16_u = 0x2Fub
+    let load8_s = 0x2Cub
+    let load8_u = 0x2Dub
+    let load16_s = 0x2Eub
+    let load16_u = 0x2Fub
 
-    store = 0x36ub
+    let store = 0x36ub
 
-    store8 = 0x3Aub
-    store16 = 0x3Bub
+    let store8 = 0x3Aub
+    let store16 = 0x3Bub
 
-    eqz = 0x45ub
-    eq = 0x46ub
-    ne = 0x47ub
-    lt_s = 0x48ub
-    lt_u = 0x49ub
-    gt_s = 0x4Aub
-    gt_u = 0x4Bub
-    le_s = 0x4Cub
-    le_u = 0x4Dub
-    ge_s = 0x4Eub
-    ge_u = 0x4Fub
+    let eqz = 0x45ub
+    let eq = 0x46ub
+    let ne = 0x47ub
+    let lt_s = 0x48ub
+    let lt_u = 0x49ub
+    let gt_s = 0x4Aub
+    let gt_u = 0x4Bub
+    let le_s = 0x4Cub
+    let le_u = 0x4Dub
+    let ge_s = 0x4Eub
+    let ge_u = 0x4Fub
 
-    clz = 0x67ub
-    ctz = 0x68ub
-    popcnt = 0x69ub
-    add = 0x6Aub
-    sub = 0x6Bub
-    mul = 0x6Cub
-    div_s = 0x6Dub
-    div_u = 0x6Eub
-    rem_s = 0x6Fub
-    rem_u = 0x70ub
-    and = 0x71ub
-    or = 0x72ub
-    xor = 0x73ub
-    shl = 0x74ub
-    shr_s = 0x75ub
-    shr_u = 0x76ub
-    rotl = 0x77ub
-    rotr = 0x78ub
+    let clz = 0x67ub
+    let ctz = 0x68ub
+    let popcnt = 0x69ub
+    let add = 0x6Aub
+    let sub = 0x6Bub
+    let mul = 0x6Cub
+    let div_s = 0x6Dub
+    let div_u = 0x6Eub
+    let rem_s = 0x6Fub
+    let rem_u = 0x70ub
+    let and = 0x71ub
+    let or = 0x72ub
+    let xor = 0x73ub
+    let shl = 0x74ub
+    let shr_s = 0x75ub
+    let shr_u = 0x76ub
+    let rotl = 0x77ub
+    let rotr = 0x78ub
 
-    wrap_i64 = 0xA7ub
-    trunc_f32_s = 0xA8ub
-    trunc_f32_u = 0xA9ub
-    trunc_f64_s = 0xAAub
-    trunc_f64_u = 0xABub
+    let wrap_i64 = 0xA7ub
+    let trunc_f32_s = 0xA8ub
+    let trunc_f32_u = 0xA9ub
+    let trunc_f64_s = 0xAAub
+    let trunc_f64_u = 0xABub
 
-    reinterpret_f32 = 0xBCub
+    let reinterpret_f32 = 0xBCub
 
-    extend8_s = 0xC0ub
-    extend16_s = 0xC1ub
+    let extend8_s = 0xC0ub
+    let extend16_s = 0xC1ub
   >
 
-  i64 = <
-    const = 0x42ub
+  let i64 = <
+    let const = 0x42ub
 
-    load = 0x29ub
+    let load = 0x29ub
 
-    load8_s = 0x30ub
-    load8_u = 0x31ub
-    load16_s = 0x32ub
-    load16_u = 0x33ub
-    load32_s = 0x34ub
-    load32_u = 0x35ub
+    let load8_s = 0x30ub
+    let load8_u = 0x31ub
+    let load16_s = 0x32ub
+    let load16_u = 0x33ub
+    let load32_s = 0x34ub
+    let load32_u = 0x35ub
 
-    store = 0x37ub
+    let store = 0x37ub
 
-    store8 = 0x3Cub
-    store16 = 0x3Dub
-    store32 = 0x3Eub
+    let store8 = 0x3Cub
+    let store16 = 0x3Dub
+    let store32 = 0x3Eub
 
-    eqz = 0x50ub
-    eq = 0x51ub
-    ne = 0x52ub
-    lt_s = 0x53ub
-    lt_u = 0x54ub
-    gt_s = 0x55ub
-    gt_u = 0x56ub
-    le_s = 0x57ub
-    le_u = 0x58ub
-    ge_s = 0x59ub
-    ge_u = 0x5Aub
+    let eqz = 0x50ub
+    let eq = 0x51ub
+    let ne = 0x52ub
+    let lt_s = 0x53ub
+    let lt_u = 0x54ub
+    let gt_s = 0x55ub
+    let gt_u = 0x56ub
+    let le_s = 0x57ub
+    let le_u = 0x58ub
+    let ge_s = 0x59ub
+    let ge_u = 0x5Aub
 
-    clz = 0x79ub
-    ctz = 0x7Aub
-    popcnt = 0x7Bub
-    add = 0x7Cub
-    sub = 0x7Dub
-    mul = 0x7Eub
-    div_s = 0x7Fub
-    div_u = 0x80ub
-    rem_s = 0x81ub
-    rem_u = 0x82ub
-    and = 0x83ub
-    or = 0x84ub
-    xor = 0x85ub
-    shl = 0x86ub
-    shr_s = 0x87ub
-    shr_u = 0x88ub
-    rotl = 0x89ub
-    rotr = 0x8Aub
+    let clz = 0x79ub
+    let ctz = 0x7Aub
+    let popcnt = 0x7Bub
+    let add = 0x7Cub
+    let sub = 0x7Dub
+    let mul = 0x7Eub
+    let div_s = 0x7Fub
+    let div_u = 0x80ub
+    let rem_s = 0x81ub
+    let rem_u = 0x82ub
+    let and = 0x83ub
+    let or = 0x84ub
+    let xor = 0x85ub
+    let shl = 0x86ub
+    let shr_s = 0x87ub
+    let shr_u = 0x88ub
+    let rotl = 0x89ub
+    let rotr = 0x8Aub
 
-    extend_i32_s = 0xACub
-    extend_i32_u = 0xADub
-    trunc_f32_s = 0xAEub
-    trunc_f32_u = 0xAFub
-    trunc_f64_s = 0xB0ub
-    trunc_f64_u = 0xB1ub
+    let extend_i32_s = 0xACub
+    let extend_i32_u = 0xADub
+    let trunc_f32_s = 0xAEub
+    let trunc_f32_u = 0xAFub
+    let trunc_f64_s = 0xB0ub
+    let trunc_f64_u = 0xB1ub
 
-    reinterpret_f64 = 0xBDub
+    let reinterpret_f64 = 0xBDub
 
-    extend_8_s = 0xC0ub
-    extend_16_s = 0xC1ub
-    extend_32_s = 0xC2ub
+    let extend_8_s = 0xC0ub
+    let extend_16_s = 0xC1ub
+    let extend_32_s = 0xC2ub
   >
 
-  f32 = <
-    const = 0x43ub
+  let f32 = <
+    let const = 0x43ub
 
-    eq = 0x5Bub
-    ne = 0x5Cub
-    lt = 0x5Dub
-    gt = 0x5Eub
-    le = 0x5Fub
-    ge = 0x60ub
+    let eq = 0x5Bub
+    let ne = 0x5Cub
+    let lt = 0x5Dub
+    let gt = 0x5Eub
+    let le = 0x5Fub
+    let ge = 0x60ub
 
-    abs = 0x8Bub
-    neg = 0x8Cub
-    ceil = 0x8Dub
-    floor = 0x8Eub
-    trunc = 0x8Fub
-    nearest = 0x90ub
-    sqrt = 0x91ub
-    add = 0x92ub
-    sub = 0x93ub
-    mul = 0x94ub
-    div = 0x95ub
-    min = 0x96ub
-    max = 0x97ub
-    copysign = 0x98ub
+    let abs = 0x8Bub
+    let neg = 0x8Cub
+    let ceil = 0x8Dub
+    let floor = 0x8Eub
+    let trunc = 0x8Fub
+    let nearest = 0x90ub
+    let sqrt = 0x91ub
+    let add = 0x92ub
+    let sub = 0x93ub
+    let mul = 0x94ub
+    let div = 0x95ub
+    let min = 0x96ub
+    let max = 0x97ub
+    let copysign = 0x98ub
 
-    convert_i32_s = 0xB2ub
-    convert_i32_u = 0xB3ub
-    convert_i64_s = 0xB4ub
-    convert_i64_u = 0xB5ub
-    demote_f64 = 0xB6ub
+    let convert_i32_s = 0xB2ub
+    let convert_i32_u = 0xB3ub
+    let convert_i64_s = 0xB4ub
+    let convert_i64_u = 0xB5ub
+    let demote_f64 = 0xB6ub
 
-    reinterpret_i32 = 0xBEub
+    let reinterpret_i32 = 0xBEub
   >
 
-  f64 = <
-    const = 0x44ub
+  let f64 = <
+    let const = 0x44ub
 
-    eq = 0x61ub
-    ne = 0x62ub
-    lt = 0x63ub
-    gt = 0x64ub
-    le = 0x65ub
-    ge = 0x66ub
+    let eq = 0x61ub
+    let ne = 0x62ub
+    let lt = 0x63ub
+    let gt = 0x64ub
+    let le = 0x65ub
+    let ge = 0x66ub
 
-    abs = 0x99ub
-    neg = 0x9Aub
-    ceil = 0x9Bub
-    floor = 0x9Cub
-    trunc = 0x9Dub
-    nearest = 0x9Eub
-    sqrt = 0x9Fub
-    add = 0xA0ub
-    sub = 0xA1ub
-    mul = 0xA2ub
-    div = 0xA3ub
-    min = 0xA4ub
-    max = 0xA5ub
-    copysign = 0xA6ub
+    let abs = 0x99ub
+    let neg = 0x9Aub
+    let ceil = 0x9Bub
+    let floor = 0x9Cub
+    let trunc = 0x9Dub
+    let nearest = 0x9Eub
+    let sqrt = 0x9Fub
+    let add = 0xA0ub
+    let sub = 0xA1ub
+    let mul = 0xA2ub
+    let div = 0xA3ub
+    let min = 0xA4ub
+    let max = 0xA5ub
+    let copysign = 0xA6ub
 
-    convert_i32_s = 0xB7ub
-    convert_i32_u = 0xB8ub
-    convert_i64_s = 0xB9ub
-    convert_i64_u = 0xBAub
-    promote_f32 = 0xBBub
+    let convert_i32_s = 0xB7ub
+    let convert_i32_u = 0xB8ub
+    let convert_i64_s = 0xB9ub
+    let convert_i64_u = 0xBAub
+    let promote_f32 = 0xBBub
 
-    reinterpret_i64 = 0xBFub
+    let reinterpret_i64 = 0xBFub
   >
 
-  memory = <
-    size = 0x3Fub
-    grow = 0x40ub
+  let memory = <
+    let size = 0x3Fub
+    let grow = 0x40ub
   >
 >
 
 <
-  valtype = valtype
-  inst = inst
-  limits = limits
+  let valtype = valtype
+  let inst = inst
+  let limits = limits
 >

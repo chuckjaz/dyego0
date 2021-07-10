@@ -42,7 +42,7 @@ var _ = Describe("enter", func() {
 	})
 	It("should be able to enter nested types", func() {
 		context := binder.NewContext()
-		element := parse("let a = < a: Int, b = < a: Int > >")
+		element := parse("let a = < a: Int, let b = < a: Int > >")
 		context.Enter(element)
 		aSym, ok := context.Scope.Find("a")
 		Expect(ok).To(BeTrue())

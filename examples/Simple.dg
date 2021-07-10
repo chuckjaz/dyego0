@@ -4,39 +4,29 @@ let Vector = <
   x: Double
   y: Double
   z: Double
-  `*`: < { scale: Double -> Double } >
-  `+`: < { other: Vector -> Vector } >
-  `-`: < { other: Vector -> Vector } >
-  dot: < { other: Vector -> Double }>
-  magnitude: < { -> Double } >
-  normalize: < { -> Vector } >
+  let `*` = { scale: Double -> [:x * scale, :y * scale, :z * scale] }: Vector 
+  let `+` = { other: Vector -> [:x + other.x, :y + other.y, :z + other.z ] }: Vector
+  let `-` = { other: Vector -> [:x - other.x, :y - other.y, :z - other.z ] }: Vector
+  let dot = { other: Vector -> x * other.x + y * other.y + z * other.z }: Double
+  let magnitude = { (this dot this).sqrt }: Double
+  let normalzie = { this * (1.0/magnitude()) }: Vector
 >
-
-let vector = { x: Double, y: Double, z: Double -> [<Vector> :x, :y, :z] }
-let Vector.`*` = { scale: Double -> [<Vector> :x * scale, :y * scale, :z * scale] }
-let Vector.`+` = { other: Vector -> [<Vector> :x + other.x, :y + other.y, :z + other.z] }
-let Vector.`-` = { other: Vector -> [<Vector> :x - other.x, :y - ohter.y, :z - other.z] }
-let Vector.dot = { other: Vector -> x * other.x + y * other.y + z * other.z }
-let Vector.magnitude = { (this dot this).sqrt }
-let Vector.normalize = { this * (1.0/magnitude()) }
+let vector = { x: Double, y: Double, z: Double -> [:x, :y, :z] }: Vector
 
 let Ray = <
   origin: Vector
   direction: Vector
 >
-
-let ray = { origin: Vector, direction: Vector -> [<Ray> :origin, :direction] }
+let ray = { origin: Vector, direction: Vector -> [:origin, :direction] }: Ray
 
 let Color = <
   r: Double
   g: Double
   b: Double
-  `*`: < { scale: Double -> Color } >
-  `+`: < { other: Color -> Color } >
+  let `*` = { scale: Double -> [:r * scale, :g * scale, :b * scale] }: Color
+  let `+` = { other: Color -> [:r + other.r, :g + other.g, :b + other.b] }: Color
 >
-let color = { r: Double, g: Double, b: Double -> [<Color> :r, :g, :b] }
-let Color.`*` = { scale: Double -> [<Color> :r * scale, :g * scale, :b * scale] }
-let Color.`+` = { other: Color -> [<Color> :r + other.r, :g + other.g, :b + other.b] }
+let color = { r: Double, g: Double, b: Double -> [:r, :g, :b] }: Color
 
 val white = color(r: 1.0, g: 1.0, b:1.0)
 val red = color(r: 1.0, g: 0.0, b: 0.0)
@@ -47,17 +37,16 @@ let Sphere = <
   center: Vector
   radius: Double
   color: Color
-  normalize: < { vector: Vector -> Vector } >
+  let normalize = { vector: Vector -> (center - vector).normalize() }: Vector 
 >
 
 let sphere = { center: Vector, radius: Double, color: Color -> [<Sphere> :center, :radius, :color] }
-let Sphere.normalize = { vector: Vector -> (center - v).normalize() }
 
 let Light = <
   position: Vector
   color: Color
 >
-let light = { position: Vector, color: Color -> [<Light> :position, :color] }
+let light = { position: Vector, color: Color -> [:position, :color] }: Light
 
 val light1 = light(position: [x: 0.7, y: -1.0, z: 1.7], color: white)
 val lut = [".", "-", "+", "*", "X", "M"]
@@ -65,7 +54,7 @@ let w = 80
 let h = 40
 
 let spheres = { t: Double ->
-  [<Sphere[]>
+  [
     [ center: [ x: -1.0, y: 1.0 - t/10.0, z: 3.0 ]
       radius: 0.3
       color: red ]
@@ -76,7 +65,7 @@ let spheres = { t: Double ->
       radius: 0.8
       color: blue ]
   ]
-}
+}: Sphere[]
 
 let render = { t: Double ->
   var j = 0
@@ -127,7 +116,7 @@ let shadePixel = { ray: Ray, obj: Sphere, tval: Double ->
   val color = diffuseShading(pi, obj, light1)
   val col = (color.r + color.g + color.b) / 3.0
   return (col * (lut.length().toDouble())).floor()
-}
+}: Int
 
 let HitPoint = <
   hit: Boolean
@@ -151,7 +140,7 @@ let intersectSphere = {ray: Ray, center: Vector, radius: Double ->
     return [hit: false, tval: -1.0]
   }
   return [hit: true, tval: t0]
-}
+}: HitPoint
 
 let clamp = { x: Double, min: Double, max: Double ->
   return when {
@@ -159,14 +148,14 @@ let clamp = { x: Double, min: Double, max: Double ->
     x > max -> { max }
     else -> { x }
   }
-}
+}: Double
 
 let diffuseShading = { p1: Vector, obj: Sphere, light: Light ->
   val n = obj.normalize()
   val lam1 = (light.position - pi).normalize() dot n
   val lam2 = clamp(lam1, 0.0, 1.0)
   return light.color * lam2 * 0.5 + obj.color * 0.3
-}
+}: Double
 
 var t = 0.0
 while(t < 1.0) {

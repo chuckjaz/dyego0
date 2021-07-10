@@ -32,13 +32,6 @@ var _ = Describe("Build", func() {
 		Expect(ok).To(BeTrue())
 		return resultSym
 	}
-	findExtension := func(typ types.Type, name string) types.TypeExtension {
-		result, ok := typ.Extensions().Find(name)
-		Expect(ok).To(BeTrue())
-		resultSym, ok := result.(types.TypeExtensions)
-		Expect(ok).To(BeTrue())
-		return resultSym.Extensions()[0]
-	}
 	m := func(text string) types.Type {
 		context := binder.NewContext()
 		element := p(text)
@@ -65,20 +58,8 @@ var _ = Describe("Build", func() {
 		am := findMember(modules, "a")
 		Expect(am).To(Not(BeNil()))
 	})
-	It("can extend a type", func() {
-		modules := m("let Int.size = 20")
-		e := findExtension(modules, "size")
-		Expect(e).To(Not(BeNil()))
-		Expect(e.Target().Name()).To(Equal("Int"))
-	})
-	It("can extend with a context", func() {
-		modules := m("let Int.Int.size = 20")
-		e := findExtension(modules, "size")
-		Expect(e).To(Not(BeNil()))
-		Expect(e.Context()[0].Name()).To(Equal("Int"))
-	})
 	It("can find a nested type", func() {
-		modules := m("let A = < B = <> >, var b: A.B")
+		modules := m("let A = < let B = <> >, var b: A.B")
 		mb := findMember(modules, "b")
 		Expect(mb).To(Not(BeNil()))
 	})
