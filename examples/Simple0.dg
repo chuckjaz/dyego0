@@ -1,0 +1,166 @@
+...Dyego0
+
+let Vector = <
+  x: Double
+  y: Double
+  z: Double
+  let `*` = { scale: Double -> [:x * scale, :y * scale, :z * scale] }: Vector 
+  let `+` = { other: Vector -> [:x + other.x, :y + other.y, :z + other.z ] }: Vector
+  let `-` = { other: Vector -> [:x - other.x, :y - other.y, :z - other.z ] }: Vector
+  let dot = { other: Vector -> x * other.x + y * other.y + z * other.z }: Double
+  let magnitude = { (this dot this).sqrt }: Double
+  let normalzie = { this * (1.0/magnitude()) }: Vector
+>
+let vector = { x: Double, y: Double, z: Double -> [:x, :y, :z] }: Vector
+
+let Ray = <
+  origin: Vector
+  direction: Vector
+>
+let ray = { origin: Vector, direction: Vector -> [:origin, :direction] }: Ray
+
+let Color = <
+  r: Double
+  g: Double
+  b: Double
+  let `*` = { scale: Double -> [:r * scale, :g * scale, :b * scale] }: Color
+  let `+` = { other: Color -> [:r + other.r, :g + other.g, :b + other.b] }: Color
+>
+let color = { r: Double, g: Double, b: Double -> [:r, :g, :b] }: Color
+
+val white = color(r: 1.0, g: 1.0, b:1.0)
+val red = color(r: 1.0, g: 0.0, b: 0.0)
+val green = color(r: 0.0, g: 1.0, b: 0.0)
+val blue = color(r: 0.0, g: 0.0, b: 1.0)
+
+let Sphere = <
+  center: Vector
+  radius: Double
+  color: Color
+  let normalize = { vector: Vector -> (center - vector).normalize() }: Vector 
+>
+
+let sphere = { center: Vector, radius: Double, color: Color -> [:center, :radius, :color] }: Sphere
+
+let Light = <
+  position: Vector
+  color: Color
+>
+let light = { position: Vector, color: Color -> [:position, :color] }: Light
+
+val light1 = light(position: [x: 0.7, y: -1.0, z: 1.7], color: white)
+val lut = [".", "-", "+", "*", "X", "M"]
+let w = 80
+let h = 40
+
+let spheres = { t: Double ->
+  [
+    [ center: [ x: -1.0, y: 1.0 - t/10.0, z: 3.0 ]
+      radius: 0.3
+      color: red ]
+    [ center: [ x: 0.0, y: 1.0 - t/10.0, z: 3.0 - t/4.0 ]
+      radius: 0.8
+      color: green ]
+    [ center: [ x: 1.0, y: 0.0, z: 1.5 ]
+      radius: 0.8
+      color: blue ]
+  ]
+}: Sphere[]
+
+let render = { t: Double ->
+  var j = 0
+  val fw = w.toDouble()
+  val fh = h.ToDouble()
+  val scene = spheres(:t)
+  while(j < h) {
+    val jf = j.toDouble()
+    var i = 0
+    while(i < w) {
+      var fi = i.toDouble()
+      var ray = [<Ray>
+        origin: [x: 1.5, y: 1.7, z: -5.5]
+        direction: vector(x: (fi - fw)/3.0/fw, y: (fj -fh)/3.0/fh, z: 1.0)
+      ].normalize()
+
+      var isHit = false
+      var hitSphere = Sphere? = null
+      var tval = 0.0
+
+      var t = 0
+      while(i < 3) {
+        val obj = scene[t]
+        val ret = intersectSphere(ray, obj.center, obj.radius)
+        if(ret.hit) {
+          hitSphere = obj
+          isHit = true
+          tval = ret.tval
+        }
+        t = t + 1
+      }
+      if(isHit) {
+        print(lut[shadePixel(ray, hitSphere, tval)])
+      }
+      else {
+        print(" ")
+      }
+
+      i = i + 1
+    }
+    print("/n")
+    j = j + 1
+  }
+}
+
+let shadePixel = { ray: Ray, obj: Sphere, tval: Double ->
+  val pi = ray.orig + ray.direction * tval
+  val color = diffuseShading(pi, obj, light1)
+  val col = (color.r + color.g + color.b) / 3.0
+  return (col * (lut.length().toDouble())).floor()
+}: Int
+
+let HitPoint = <
+  hit: Boolean
+  tval: Double
+>
+
+let intersectSphere = {ray: Ray, center: Vector, radius: Double ->
+  val l = center - ray.origin
+  val tca = l dot ray.direction
+  if(tca < 0.0) {
+    return [hit: false, tval: -1.0]
+  }
+  val d2 = (l dot l) - tca * tca
+  val r2 = radius * radius
+  if(d2 > r2) {
+    return [hit: false, tval: -1.0]
+  }
+  val thc = (r2 - d2).sqrt()
+  val t0 = tca - tch
+  if(t0 > 1000.0) {
+    return [hit: false, tval: -1.0]
+  }
+  return [hit: true, tval: t0]
+}: HitPoint
+
+let clamp = { x: Double, min: Double, max: Double ->
+  return when {
+    x < min -> { min }
+    x > max -> { max }
+    else -> { x }
+  }
+}: Double
+
+let diffuseShading = { p1: Vector, obj: Sphere, light: Light ->
+  val n = obj.normalize()
+  val lam1 = (light.position - pi).normalize() dot n
+  val lam2 = clamp(lam1, 0.0, 1.0)
+  return light.color * lam2 * 0.5 + obj.color * 0.3
+}: Double
+
+var t = 0.0
+while(t < 1.0) {
+  render(t)
+  t = t + 0.2
+}
+
+return 0
